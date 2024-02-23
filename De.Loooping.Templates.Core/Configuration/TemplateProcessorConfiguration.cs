@@ -6,8 +6,8 @@ public class TemplateProcessorConfiguration: IContentReplacerConfiguration
     public bool AllowFormatting { get; init; } = true;
     public bool AllowChildren { get; init; } = true;
 
-    public string LeftDelimiter { get; init; } = "{";
-    public string RightDelimiter { get; init; } = "}";
+    public string LeftDelimiter { get; init; } = "{{";
+    public string RightDelimiter { get; init; } = "}}";
 
     public char ChildSeparator { get; init; } = '.';
 }
