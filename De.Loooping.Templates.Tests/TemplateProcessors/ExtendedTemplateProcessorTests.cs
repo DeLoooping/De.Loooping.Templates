@@ -1,13 +1,12 @@
 using System.Globalization;
-using De.Loooping.Templates.Core;
 using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.ContentReplacers;
 using De.Loooping.Templates.Core.TemplateProcessors;
 
-namespace De.Loooping.Templates.Tests;
+namespace De.Loooping.Templates.Tests.TemplateProcessors;
 
-[Trait("TestCategory", "UnitTest")]
-public class TemplateProcessorTests
+[Trait("TestCategory", "IntegrationTest")]
+public class ExtendedTemplateProcessorTests
 {
     #region private classes
     private class SimpleClass
@@ -62,20 +61,20 @@ public class TemplateProcessorTests
         NestedClass testObject = CreateTestObject();
         var processor = GetTemplateProcessorWithObjectPropertyReplacer(testObject);
 
-        string stringResult = processor.Process("-{String}-");
+        string stringResult = processor.Process("-{{String}}-");
         Assert.Equal("-Test-", stringResult);
         
-        string intResult = processor.Process("-{Int}-");
+        string intResult = processor.Process("-{{Int}}-");
         Assert.Equal("-12345-", intResult);
         
-        string decimalResult = processor.Process("-{Decimal}-");
+        string decimalResult = processor.Process("-{{Decimal}}-");
         Assert.Equal("-12.345-", decimalResult);
         
         // This test is unreliable because of daylight saving time
         //string dateResult = replacer.Process("-{DateTime}-");
         //Assert.Equal("-11/11/2023 01:00:00-", dateResult);
         
-        string objectResult = processor.Process("-{Child}-");
+        string objectResult = processor.Process("-{{Child}}-");
         Assert.Equal($"-{typeof(SimpleClass).FullName}-", objectResult);
     }
 
@@ -85,13 +84,13 @@ public class TemplateProcessorTests
         NestedClass testObject = CreateTestObject();
         var processor = GetTemplateProcessorWithObjectPropertyReplacer(testObject);
 
-        string intResult = processor.Process("-{Int:#,##0}-");
+        string intResult = processor.Process("-{{Int:#,##0}}-");
         Assert.Equal("-12,345-", intResult);
         
-        string decimalResult = processor.Process("-{Decimal:000.0000}-");
+        string decimalResult = processor.Process("-{{Decimal:000.0000}}-");
         Assert.Equal("-012.3450-", decimalResult);
 
-        string dateResult = processor.Process("-{DateTime:U}-");
+        string dateResult = processor.Process("-{{DateTime:U}}-");
         Assert.Equal("-Saturday, 11 November 2023 00:00:00-", dateResult);
     }
     
@@ -101,16 +100,16 @@ public class TemplateProcessorTests
         NestedClass testObject = CreateTestObject();
         var processor = GetTemplateProcessorWithObjectPropertyReplacer(testObject);
 
-        string stringResult = processor.Process("-{Child.String}-");
+        string stringResult = processor.Process("-{{Child.String}}-");
         Assert.Equal("-TestChild-", stringResult);
         
-        string intResult = processor.Process("-{Child.Int}-");
+        string intResult = processor.Process("-{{Child.Int}}-");
         Assert.Equal("-123456-", intResult);
         
-        string decimalResult = processor.Process("-{Child.Decimal}-");
+        string decimalResult = processor.Process("-{{Child.Decimal}}-");
         Assert.Equal("-12.3456-", decimalResult);
         
-        string dateResult = processor.Process("-{Child.DateTime:U}-");
+        string dateResult = processor.Process("-{{Child.DateTime:U}}-");
         Assert.Equal("-Sunday, 12 November 2023 00:00:00-", dateResult);
     }
     
@@ -120,7 +119,7 @@ public class TemplateProcessorTests
         NestedClass testObject = new NestedClass();
         var processor = GetTemplateProcessorWithObjectPropertyReplacer(testObject);
 
-        string objectResult = processor.Process("-{Child}-");
+        string objectResult = processor.Process("-{{Child}}-");
         Assert.Equal("--", objectResult);
     }
     
@@ -130,7 +129,7 @@ public class TemplateProcessorTests
         NestedClass testObject = new NestedClass();
         var processor = GetTemplateProcessorWithObjectPropertyReplacer(testObject);
 
-        string intResult = processor.Process("-{Child.Int}-");
+        string intResult = processor.Process("-{{Child.Int}}-");
         Assert.Equal("--", intResult);
     }
     
@@ -144,8 +143,8 @@ public class TemplateProcessorTests
             AllowFormatting = false
         });
 
-        string intResult = processor.Process("-{Int:#,##0}-");
-        Assert.Equal("-{Int:#,##0}-", intResult); // not a valid placeholder name
+        string intResult = processor.Process("-{{Int:#,##0}}-");
+        Assert.Equal("-{{Int:#,##0}}-", intResult); // not a valid format
     }
     
     [Fact(DisplayName = $"{nameof(TemplateProcessor)} does not evaluate nested levels of a data object if {nameof(TemplateProcessorConfiguration)}.{nameof(TemplateProcessorConfiguration.AllowChildren)} is false")]
@@ -158,8 +157,8 @@ public class TemplateProcessorTests
             AllowChildren = false
         });
 
-        string stringResult = processor.Process("-{Child.String}-");
-        Assert.Equal("-{Child.String}-", stringResult); // not a valid placeholder name
+        string stringResult = processor.Process("-{{Child.String}}-");
+        Assert.Equal("-{{Child.String}}-", stringResult); // not a valid placeholder name
     }
     
     [Fact(DisplayName = $"{nameof(TemplateProcessor)} works with custom placeholder delimiters")]
@@ -187,7 +186,7 @@ public class TemplateProcessorTests
             ChildSeparator = '#'
         });
 
-        string stringResult = processor.Process("-{Child#String}-");
+        string stringResult = processor.Process("-{{Child#String}}-");
         Assert.Equal("-TestChild-", stringResult);
     }
     
@@ -201,31 +200,14 @@ public class TemplateProcessorTests
             PlaceHolderNameRegex = "String|Child"
         });
 
-        string stringResult = processor.Process("-{String}-");
+        string stringResult = processor.Process("-{{String}}-");
         Assert.Equal("-Test-", stringResult);
 
-        string childStringResult = processor.Process("-{Child.String}-");
+        string childStringResult = processor.Process("-{{Child.String}}-");
         Assert.Equal("-TestChild-", childStringResult);
         
-        string intResult = processor.Process("-{Int}-");
-        Assert.Equal("-{Int}-", intResult);
-    }
-
-    [Fact(DisplayName = $"{nameof(TemplateProcessor)} works with IDictionary")]
-    public void ProcessorWorksWithIDictionary()
-    {
-        System.Collections.IDictionary testObject = new Dictionary<object, object>()
-        {
-            { "Test", "TestOut" },
-            { "Int", 2 }
-        };
-        var processor = GetTemplateProcessorWithObjectPropertyReplacer(testObject);
-
-        string stringResult = processor.Process("-{Test}-");
-        Assert.Equal("-TestOut-", stringResult);
-
-        string intResult = processor.Process("-{Int}-");
-        Assert.Equal("-2-", intResult);
+        string intResult = processor.Process("-{{Int}}-");
+        Assert.Equal("-{{Int}}-", intResult);
     }
     
     private class CustomContentReplacer: IContentReplacer
@@ -237,10 +219,10 @@ public class TemplateProcessorTests
     }
 
     [Theory(DisplayName = $"{nameof(TemplateProcessor)} works with a custom {nameof(IContentReplacer)}")]
-    [InlineData("-{test}-", "-[test|]-")]
-    [InlineData("-{test.child}-", "-[test.child|]-")]
-    [InlineData("-{test:format}-", "-[test|format]-")]
-    [InlineData("-{test.child:format}-", "-[test.child|format]-")]
+    [InlineData("-{{test}}-", "-[test|]-")]
+    [InlineData("-{{test.child}}-", "-[test.child|]-")]
+    [InlineData("-{{test:format}}-", "-[test|format]-")]
+    [InlineData("-{{test.child:format}}-", "-[test.child|format]-")]
     public void ProcessorWorksWithCustomContentReplacer(string template, string expectedResult)
     {
         // setup
@@ -260,7 +242,7 @@ public class TemplateProcessorTests
         
         Environment.SetEnvironmentVariable("A_TOTALY_SUPERFLUOS_ENVIRONMENT_VARIABLE_FOR_A_TEST", "TestValue");
 
-        string result = processor.Process("-{A_TOTALY_SUPERFLUOS_ENVIRONMENT_VARIABLE_FOR_A_TEST}-");
+        string result = processor.Process("-{{A_TOTALY_SUPERFLUOS_ENVIRONMENT_VARIABLE_FOR_A_TEST}}-");
         Assert.Equal("-TestValue-", result);
     }
     
