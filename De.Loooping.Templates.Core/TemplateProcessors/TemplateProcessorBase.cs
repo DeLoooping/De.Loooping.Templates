@@ -83,7 +83,8 @@ public abstract class TemplateProcessorBase
         string result = _placeholderRegex.Replace(template, match =>
         {
             string placeholderName = match.Groups["PLACEHOLDERNAME"].Value;
-            string format = match.Groups["FORMAT"].Value;
+            Group formatGroup = match.Groups["FORMAT"];
+            string? format = formatGroup.Success ? formatGroup.Value : null;
             return replace(placeholderName, format) ?? string.Empty;
         });
 
