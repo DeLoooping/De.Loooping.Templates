@@ -168,8 +168,8 @@ public class ExtendedTemplateProcessorTests
         IContentReplacer replacer = new ObjectPropertyReplacer(testObject);
         var processor = new TemplateProcessor(replacer, new TemplateProcessorConfiguration()
         {
-            LeftDelimiter = "[",
-            RightDelimiter = "]"
+            LeftContentDelimiter = "[",
+            RightContentDelimiter = "]"
         });
 
         string stringResult = processor.Process("-[String]-");

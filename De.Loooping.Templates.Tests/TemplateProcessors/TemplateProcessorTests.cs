@@ -35,4 +35,24 @@ public class TemplateProcessorTests
         replacerMock.Verify(r=>
             r.Replace(It.IsAny<IContentReplacerConfiguration>(), "name3", "format3 "), Times.Once);
     }
+    
+    [Fact(DisplayName = $"{nameof(TemplateProcessor)} processes loops")]
+    public void TemplateProcessorProcessesLoops()
+    {
+        // setup
+        var replacerMock = new Mock<IContentReplacer>();
+        int callIndex = 0;
+        replacerMock.Setup(r =>
+            r.Replace(It.IsAny<IContentReplacerConfiguration>(), It.IsAny<string>(), It.IsAny<string?>()))
+            .Returns($"{callIndex++}");
+        
+        var templateProcessor = new TemplateProcessor(replacerMock.Object);
+        
+        // act
+        var result = templateProcessor.Process(
+            "{# for(int i=0;i<3;i++) { #}|{{ somecontent }}|\n{# } #}");
+
+        // verify
+        Assert.Equal("|0|\n|1|\n|2|", result);
+    }
 }

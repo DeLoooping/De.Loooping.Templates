@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.Configuration;
+using De.Loooping.Templates.Core.Configuration.Validation;
 
 namespace De.Loooping.Templates.Core.TemplateProcessors;
 
@@ -19,25 +20,18 @@ public abstract class TemplateProcessorBase
 
     public TemplateProcessorBase(TemplateProcessorConfiguration configuration)
     {
-        if (String.IsNullOrEmpty(configuration.LeftDelimiter))
-        {
-            throw new ArgumentException($"{nameof(configuration)}.{nameof(configuration.LeftDelimiter)} must not be null or empty.");
-        }
+        var validator = new TemplateProcessorConfigurationValidation();
+        var validationResult = validator.Validate(null, configuration);
 
-        if (String.IsNullOrEmpty(configuration.RightDelimiter))
+        if (validationResult.Failed)
         {
-            throw new ArgumentException($"{nameof(configuration)}.{nameof(configuration.LeftDelimiter)} must not be null or empty.");
-        }
-
-        if (!IsValidRegex(configuration.PlaceHolderNameRegex))
-        {
-            throw new ArgumentException($"{nameof(configuration)}.{nameof(configuration.PlaceHolderNameRegex)} must be a valid regular expression.");
+            throw new ArgumentException(String.Join("\n", validationResult.Failures));
         }
 
         Configuration = configuration;
 
         StringBuilder builder = new StringBuilder();
-        builder.Append(Regex.Escape(Configuration.LeftDelimiter));
+        builder.Append(Regex.Escape(Configuration.LeftContentDelimiter));
         builder.Append(@"\s*(?<PLACEHOLDERNAME>");
         if (Configuration.AllowChildren)
         {
@@ -53,7 +47,7 @@ public abstract class TemplateProcessorBase
             builder.Append(@"(\s*:(?<FORMAT>[^}]*))?");
         }
         builder.Append(@"\s*");
-        builder.Append(Regex.Escape(Configuration.RightDelimiter));
+        builder.Append(Regex.Escape(Configuration.RightContentDelimiter));
 
         var pattern = builder.ToString();
         

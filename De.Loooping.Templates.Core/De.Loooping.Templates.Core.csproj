@@ -3,11 +3,14 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.2.0-alpha0004</Version>
+    <Version>0.2.0-alpha0005</Version>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-alpha.4+Branch.develop.Sha.ae5daab797bacc00ec78a4a7b600ab5fd7a21832</InformationalVersion>
+    <InformationalVersion>0.2.0-alpha.5+Branch.develop.Sha.f18a91e4ccd50d23828520576f9050a5f2a8bdc5</InformationalVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="git config core.hooksPath .githooks" />
   </Target>
