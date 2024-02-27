@@ -9,16 +9,16 @@ public class TokenizerTests
     private static Mock<ITokenizerConfiguration> CreateConfigurationMock()
     {
         var configurationMock = new Mock<ITokenizerConfiguration>();
-        configurationMock.SetupProperty(configuration => configuration.LeftCommentDelimiter, "{#");
-        configurationMock.SetupProperty(configuration => configuration.RightCommentDelimiter, "#}");
-        configurationMock.SetupProperty(configuration => configuration.LeftContentDelimiter, "{{");
-        configurationMock.SetupProperty(configuration => configuration.RightContentDelimiter, "}}");
-        configurationMock.SetupProperty(configuration => configuration.LeftStatementDelimiter, "{%");
-        configurationMock.SetupProperty(configuration => configuration.RightStatementDelimiter, "%}");
+        configurationMock.Setup(configuration => configuration.LeftCommentDelimiter).Returns("{#");
+        configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("#}");
+        configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("{{");
+        configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns("}}");
+        configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("{%");
+        configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("%}");
         return configurationMock;
     }
 
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Comment)}")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts comments")]
     public void TokenizerExtractsComments()
     {
         // setup
@@ -30,20 +30,40 @@ public class TokenizerTests
 
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Comment, tuple.Item1);
-                Assert.Equal(" Comment1 ", tuple.Item2);
+                Assert.Equal(TokenType.LeftCommentDelimiter, token.TokenType);
+                Assert.Equal("{#", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Comment, tuple.Item1);
-                Assert.Equal("Comment2", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal(" Comment1 ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightCommentDelimiter, token.TokenType);
+                Assert.Equal("#}", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftCommentDelimiter, token.TokenType);
+                Assert.Equal("{#", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("Comment2", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightCommentDelimiter, token.TokenType);
+                Assert.Equal("#}", token.Value);
             }
         );
     }
 
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Content)}")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Content")]
     public void TokenizerExtractsContent()
     {
         // setup
@@ -55,20 +75,40 @@ public class TokenizerTests
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal(" Content1 ", tuple.Item2);
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("{{", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal("Content2", tuple.Item2);
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" Content1 ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal("}}", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("{{", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal("Content2", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal("}}", token.Value);
             }
         );
     }
     
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Statement)}")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Statements")]
     public void TokenizerExtractsStatements()
     {
         // setup
@@ -80,20 +120,40 @@ public class TokenizerTests
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal(" Statement1 ", tuple.Item2);
+                Assert.Equal(TokenType.LeftStatementDelimiter, token.TokenType);
+                Assert.Equal("{%", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal("Statement2", tuple.Item2);
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" Statement1 ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightStatementDelimiter, token.TokenType);
+                Assert.Equal("%}", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftStatementDelimiter, token.TokenType);
+                Assert.Equal("{%", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal("Statement2", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightStatementDelimiter, token.TokenType);
+                Assert.Equal("%}", token.Value);
             }
         );
     }
     
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Statement)} with right delimiter in double quotes")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Statements with right delimiter in double quotes")]
     public void TokenizerExtractsStatementsWithRightDelimiterInDoubleQuotes()
     {
         // setup
@@ -105,25 +165,35 @@ public class TokenizerTests
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("left literal", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("left literal", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Statement, tuple.Item1);
-                Assert.Equal(" \"%}\" ", tuple.Item2);
+                Assert.Equal(TokenType.LeftStatementDelimiter, token.TokenType);
+                Assert.Equal("{%", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("right literal", tuple.Item2);
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" \"%}\" ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightStatementDelimiter, token.TokenType);
+                Assert.Equal("%}", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("right literal", token.Value);
             }
         );
     }
     
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Content)} with right delimiter in double quotes")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Content with right delimiter in double quotes")]
     public void TokenizerExtractsContentWithRightDelimiterInDoubleQuotes()
     {
         // setup
@@ -131,39 +201,55 @@ public class TokenizerTests
         Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
         
         // act
-        var result = tokenizer.Tokenize("left literal{{ \"%}\" }}right literal");
+        var result = tokenizer.Tokenize("left literal{{ \"}}\" }}right literal");
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("left literal", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("left literal", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal(" \"%}\" ", tuple.Item2);
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("{{", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("right literal", tuple.Item2);
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" \"}}\" ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal("}}", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("right literal", token.Value);
             }
         );
     }
     
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Statement)} with right delimiter in single quotes")]
-    public void TokenizerExtractsStatementsWithRightDelimiterInSigngleQuotes()
+    private static Mock<ITokenizerConfiguration> CreateSingleDelimiterConfigurationMock()
+    {
+        var configurationMock = new Mock<ITokenizerConfiguration>();
+        configurationMock.Setup(configuration => configuration.LeftCommentDelimiter).Returns("{");
+        configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("}");
+        configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("<");
+        configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns(">");
+        configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("[");
+        configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("]");
+        return configurationMock;
+    }
+
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Statements with right delimiter in single quotes")]
+    public void TokenizerExtractsCSharpWithRightDelimiterInSingleQuotes()
     {
         // setup
-        var configurationMock = new Mock<ITokenizerConfiguration>();
-        configurationMock.SetupProperty(configuration => configuration.LeftCommentDelimiter, "{");
-        configurationMock.SetupProperty(configuration => configuration.RightCommentDelimiter, "}");
-        configurationMock.SetupProperty(configuration => configuration.LeftContentDelimiter, "<");
-        configurationMock.SetupProperty(configuration => configuration.RightContentDelimiter, ">");
-        configurationMock.SetupProperty(configuration => configuration.LeftStatementDelimiter, "[");
-        configurationMock.SetupProperty(configuration => configuration.RightStatementDelimiter, "]");
+        var configurationMock = CreateSingleDelimiterConfigurationMock();
         Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
         
         // act
@@ -171,60 +257,74 @@ public class TokenizerTests
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("left literal", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("left literal", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Statement, tuple.Item1);
-                Assert.Equal(" ']' ", tuple.Item2);
+                Assert.Equal(TokenType.LeftStatementDelimiter, token.TokenType);
+                Assert.Equal("[", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("right literal", tuple.Item2);
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" ']' ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightStatementDelimiter, token.TokenType);
+                Assert.Equal("]", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("right literal", token.Value);
             }
         );
     }
     
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts {nameof(Token.Content)} with right delimiter in single quotes")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Content with right delimiter in single quotes")]
     public void TokenizerExtractsContentWithRightDelimiterInSingleQuotes()
     {
         // setup
-        var configurationMock = new Mock<ITokenizerConfiguration>();
-        configurationMock.SetupProperty(configuration => configuration.LeftCommentDelimiter, "{");
-        configurationMock.SetupProperty(configuration => configuration.RightCommentDelimiter, "}");
-        configurationMock.SetupProperty(configuration => configuration.LeftContentDelimiter, "<");
-        configurationMock.SetupProperty(configuration => configuration.RightContentDelimiter, ">");
-        configurationMock.SetupProperty(configuration => configuration.LeftStatementDelimiter, "[");
-        configurationMock.SetupProperty(configuration => configuration.RightStatementDelimiter, "]");
+        var configurationMock = CreateSingleDelimiterConfigurationMock();
         Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
-        
+
         // act
         var result = tokenizer.Tokenize("left literal< '>' >right literal");
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("left literal", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("left literal", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal(" '>' ", tuple.Item2);
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("<", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("right literal", tuple.Item2);
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" '>' ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal(">", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("right literal", token.Value);
             }
         );
     }
-    
+
     [Fact(DisplayName = $"{nameof(Tokenizer)} tokenizes complex template")]
     public void TokenizerTokenizesComplexTemplate()
     {
@@ -233,29 +333,59 @@ public class TokenizerTests
         Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
         
         // act
-        var result = tokenizer.Tokenize("{# A comment #}A literal\n{{ A content }}{% A statement %}");
+        var result = tokenizer.Tokenize("{# A comment #}A literal\n{{ (\"{{\"+content+\"}}\").ToLower() }}{% var i = 42; %}");
             
         // validate
         Assert.Collection(result,
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Comment, tuple.Item1);
-                Assert.Equal(" Comment1 ", tuple.Item2);
+                Assert.Equal(TokenType.LeftCommentDelimiter, token.TokenType);
+                Assert.Equal("{#", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Literal, tuple.Item1);
-                Assert.Equal("A literal\n", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal(" A comment ", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Content, tuple.Item1);
-                Assert.Equal(" A content ", tuple.Item2);
+                Assert.Equal(TokenType.RightCommentDelimiter, token.TokenType);
+                Assert.Equal("#}", token.Value);
             },
-            tuple =>
+            token =>
             {
-                Assert.Equal(Token.Statement, tuple.Item1);
-                Assert.Equal(" A statement ", tuple.Item2);
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("A literal\n", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("{{", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" (\"{{\"+content+\"}}\").ToLower() ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal("}}", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftStatementDelimiter, token.TokenType);
+                Assert.Equal("{%", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" var i = 42; ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightStatementDelimiter, token.TokenType);
+                Assert.Equal("%}", token.Value);
             }
         );
     }

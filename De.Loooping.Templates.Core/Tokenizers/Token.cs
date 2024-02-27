@@ -1,9 +1,9 @@
 namespace De.Loooping.Templates.Core.Tokenizers;
 
-public enum Token
+internal class Token
 {
-    Literal,
-    Content,
-    Statement,
-    Comment
+    public required TokenType TokenType { get; init; }
+    public required string Value { get; init; }
+    public required int StartIndex { get; init; }
+    public required int CharactersConsumed { get; init; }
 }

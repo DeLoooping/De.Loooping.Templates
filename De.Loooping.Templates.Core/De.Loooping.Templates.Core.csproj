@@ -3,12 +3,16 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.2.0-alpha0005</Version>
+    <Version>0.2.0-alpha0006</Version>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-alpha.5+Branch.develop.Sha.f18a91e4ccd50d23828520576f9050a5f2a8bdc5</InformationalVersion>
+    <InformationalVersion>0.2.0-alpha.6+Branch.develop.Sha.4049d8fa73f59d88058dd19ba884447a1fdbdc45</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="De.Loooping.Templates.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
   </ItemGroup>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
