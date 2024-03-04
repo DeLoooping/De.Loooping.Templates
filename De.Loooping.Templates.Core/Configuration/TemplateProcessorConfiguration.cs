@@ -1,10 +1,11 @@
+using Microsoft.CodeAnalysis.CSharp;
+
 namespace De.Loooping.Templates.Core.Configuration;
 
-public class TemplateProcessorConfiguration: IContentReplacerConfiguration, ITokenizerConfiguration
+public class TemplateProcessorConfiguration: ITokenizerConfiguration
 {
-    public string PlaceHolderNameRegex { get; init; } = @"[a-zA-Z_][a-zA-Z0-9_]*";
+    public LanguageVersion LanguageVersion { get; init; } = LanguageVersion.CSharp12;
     public bool AllowFormatting { get; init; } = true;
-    public bool AllowChildren { get; init; } = true;
 
     public string LeftContentDelimiter { get; init; } = "{{";
     public string RightContentDelimiter { get; init; } = "}}";
@@ -14,6 +15,4 @@ public class TemplateProcessorConfiguration: IContentReplacerConfiguration, ITok
 
     public string LeftCommentDelimiter { get; init; } = "{#";
     public string RightCommentDelimiter { get; init; } = "#}";
-
-    public char ChildSeparator { get; init; } = '.';
 }
