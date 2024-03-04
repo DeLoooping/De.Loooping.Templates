@@ -1,5 +1,6 @@
 using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Tokenizers.TokenExtractors;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace De.Loooping.Templates.Core.Tokenizers;
 
@@ -20,10 +21,12 @@ internal class Tokenizer
     }
     
     private readonly ITokenizerConfiguration _configuration;
+    private readonly CSharpParseOptions _parseOptions;
 
-    public Tokenizer(ITokenizerConfiguration configuration)
+    public Tokenizer(ITokenizerConfiguration configuration, CSharpParseOptions parseOptions)
     {
         _configuration = configuration;
+        _parseOptions = parseOptions;
     }
 
     public List<Token> Tokenize(string template)
@@ -38,8 +41,8 @@ internal class Tokenizer
         var leftCommentDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftCommentDelimiter, TokenType.LeftCommentDelimiter);
         var rightCommentDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightCommentDelimiter, TokenType.RightCommentDelimiter);
         
-        var contentCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightContentDelimiter });
-        var statementCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightStatementDelimiter });
+        var contentCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightContentDelimiter }, _parseOptions);
+        var statementCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightStatementDelimiter }, _parseOptions);
         
         var literalExtractor = new LiteralExtractor(template, new[]
         {

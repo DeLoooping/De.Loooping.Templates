@@ -8,6 +8,7 @@ namespace De.Loooping.Templates.Core.Tokenizers.TokenExtractors;
 
 internal class CSharpExtractor: AbstractTokenExtractor
 {
+    #region static fields
     private static readonly Assembly _MICROSOFT_CODE_ANALYSIS_ASSEMBLY;
     private static readonly Assembly _MICROSOFT_CODE_ANALYSIS_CSHARP_ASSEMBLY;
     
@@ -27,8 +28,6 @@ internal class CSharpExtractor: AbstractTokenExtractor
 
     private static readonly PropertyInfo _CSHARP_SYNTAX_NODE_KIND_PROPERTY;
     
-    private readonly List<string> _rightDelimiters;
-
     static CSharpExtractor()
     {
         _MICROSOFT_CODE_ANALYSIS_ASSEMBLY = typeof(SourceCodeKind).Assembly;
@@ -53,17 +52,21 @@ internal class CSharpExtractor: AbstractTokenExtractor
         Type cSharpSyntaxNodeType = GetType(_MICROSOFT_CODE_ANALYSIS_CSHARP_ASSEMBLY, "CSharpSyntaxNode", "Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax");
         _CSHARP_SYNTAX_NODE_KIND_PROPERTY = cSharpSyntaxNodeType.GetProperty("Kind")!;
     }
+    #endregion
 
-    public CSharpExtractor(string toBeScanned, IEnumerable<string> rightDelimiters) : base(toBeScanned)
+    private readonly List<string> _rightDelimiters;
+    private readonly CSharpParseOptions _parseOptions;
+
+    public CSharpExtractor(string toBeScanned, IEnumerable<string> rightDelimiters, CSharpParseOptions parseOptions) : base(toBeScanned)
     {
+        _parseOptions = parseOptions;
         _rightDelimiters = rightDelimiters.ToList();
     }
 
     public override bool TryExtract(int startIndex, out Token? token)
     {
         var sourceText = SourceText.From(ToBeScanned, Encoding.Default);
-        var options = new CSharpParseOptions(languageVersion: LanguageVersion.CSharp12);
-        var lexer = _LEXER_CONSTRUCTOR.Invoke(new object[] { sourceText, options, false, false })!;
+        var lexer = _LEXER_CONSTRUCTOR.Invoke(new object[] { sourceText, _parseOptions, false, false })!;
 
         int index = startIndex;
         do

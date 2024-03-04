@@ -1,5 +1,6 @@
 using De.Loooping.Templates.Core.Tokenizers;
 using De.Loooping.Templates.Core.Tokenizers.TokenExtractors;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace De.Loooping.Templates.Tests.Tokenizers.TokenExtractors;
 
@@ -10,7 +11,7 @@ public class CSharpExtractorTests
     {
         // setup
         string toBeScanned = """preamble string a = "\"}\""; }""";
-        var extractor = new CSharpExtractor(toBeScanned, ["}"]);
+        var extractor = new CSharpExtractor(toBeScanned, ["}"], new CSharpParseOptions(LanguageVersion.CSharp12));
         
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);
@@ -29,7 +30,7 @@ public class CSharpExtractorTests
     {
         // setup
         string toBeScanned = """preamble°epilogue""";
-        var extractor = new CSharpExtractor(toBeScanned, ["}"]);
+        var extractor = new CSharpExtractor(toBeScanned, ["}"], new CSharpParseOptions(LanguageVersion.CSharp12));
         
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);
@@ -44,7 +45,7 @@ public class CSharpExtractorTests
     {
         // setup
         string toBeScanned = "statement1();\nstatement2();";
-        var extractor = new CSharpExtractor(toBeScanned, ["}"]);
+        var extractor = new CSharpExtractor(toBeScanned, ["}"], new CSharpParseOptions(LanguageVersion.CSharp12));
         
         // act
         bool isExtracted = extractor.TryExtract(0, out var token);

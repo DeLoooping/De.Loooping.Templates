@@ -1,5 +1,6 @@
 using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Tokenizers;
+using Microsoft.CodeAnalysis.CSharp;
 using Moq;
 
 namespace De.Loooping.Templates.Tests.Tokenizers;
@@ -18,12 +19,30 @@ public class TokenizerTests
         return configurationMock;
     }
 
+    private static Mock<ITokenizerConfiguration> CreateSingleDelimiterConfigurationMock()
+    {
+        var configurationMock = new Mock<ITokenizerConfiguration>();
+        configurationMock.Setup(configuration => configuration.LeftCommentDelimiter).Returns("{");
+        configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("}");
+        configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("<");
+        configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns(">");
+        configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("[");
+        configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("]");
+        return configurationMock;
+    }
+
+    private static Tokenizer CreateTokenizer(ITokenizerConfiguration configuration)
+    {
+        var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
+        return new Tokenizer(configuration, options);
+    }
+
     [Fact(DisplayName = $"{nameof(Tokenizer)} extracts comments")]
     public void TokenizerExtractsComments()
     {
         // setup
         var configurationMock = CreateConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
 
         // act
         var result = tokenizer.Tokenize("{# Comment1 #}{#Comment2#}");
@@ -68,7 +87,7 @@ public class TokenizerTests
     {
         // setup
         var configurationMock = CreateConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
         
         // act
         var result = tokenizer.Tokenize("{{ Content1 }}{{Content2}}");
@@ -113,7 +132,7 @@ public class TokenizerTests
     {
         // setup
         var configurationMock = CreateConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
         
         // act
         var result = tokenizer.Tokenize("{% Statement1 %}{%Statement2%}");
@@ -158,7 +177,7 @@ public class TokenizerTests
     {
         // setup
         var configurationMock = CreateConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
         
         // act
         var result = tokenizer.Tokenize("left literal{% \"%}\" %}right literal");
@@ -198,7 +217,7 @@ public class TokenizerTests
     {
         // setup
         var configurationMock = CreateConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
         
         // act
         var result = tokenizer.Tokenize("left literal{{ \"}}\" }}right literal");
@@ -233,24 +252,12 @@ public class TokenizerTests
         );
     }
     
-    private static Mock<ITokenizerConfiguration> CreateSingleDelimiterConfigurationMock()
-    {
-        var configurationMock = new Mock<ITokenizerConfiguration>();
-        configurationMock.Setup(configuration => configuration.LeftCommentDelimiter).Returns("{");
-        configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("}");
-        configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("<");
-        configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns(">");
-        configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("[");
-        configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("]");
-        return configurationMock;
-    }
-
     [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Statements with right delimiter in single quotes")]
     public void TokenizerExtractsCSharpWithRightDelimiterInSingleQuotes()
     {
         // setup
         var configurationMock = CreateSingleDelimiterConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
         
         // act
         var result = tokenizer.Tokenize("left literal[ ']' ]right literal");
@@ -290,7 +297,7 @@ public class TokenizerTests
     {
         // setup
         var configurationMock = CreateSingleDelimiterConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
 
         // act
         var result = tokenizer.Tokenize("left literal< '>' >right literal");
@@ -330,7 +337,7 @@ public class TokenizerTests
     {
         // setup
         var configurationMock = CreateConfigurationMock();
-        Tokenizer tokenizer = new Tokenizer(configurationMock.Object);
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
         
         // act
         var result = tokenizer.Tokenize("{# A comment #}A literal\n{{ (\"{{\"+content+\"}}\").ToLower() }}{% var i = 42; %}");

@@ -55,4 +55,35 @@ public class TemplateProcessorTests
         // verify
         Assert.Equal("|0|\n|1|\n|2|", result);
     }
+
+    public class Counter
+    {
+        private int _i = 0;
+
+        public int CountUp()
+        {
+            return _i++;
+        }
+    }
+
+    private delegate string CounterDelegate(Counter counter);
+
+    [Fact(DisplayName = $"{nameof(FullTemplateProcessor<MulticastDelegate>)} processes loops")]
+    public void FullTemplateProcessorProcessesLoops()
+    {
+        // setup
+        var counter = new Counter();
+        string template = "{% for(int i=0;i<3;i++) { %}|{{ counter.CountUp().ToString() }}|\n{% } %}";
+        
+        var templateProcessor = new FullTemplateProcessor<CounterDelegate>(new TemplateProcessorConfiguration(), template);
+        templateProcessor.AddType(typeof(object));
+        templateProcessor.AddType(typeof(Counter));
+        
+        // act
+        var processor = templateProcessor.Build();
+        var result = processor(counter);
+
+        // verify
+        Assert.Equal("|0|\n|1|\n|2|\n", result);
+    }
 }
