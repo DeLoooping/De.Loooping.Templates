@@ -10,6 +10,7 @@ internal class Tokenizer
     {
         Literal,
         Content,
+        ContentFormat,
         Statement,
         Comment
     }
@@ -36,14 +37,16 @@ internal class Tokenizer
 
         var leftContentDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftContentDelimiter, TokenType.LeftContentDelimiter);
         var rightContentDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightContentDelimiter, TokenType.RightContentDelimiter);
+        var contentFormatDelimiterExtractor = new DelimiterExtractor(template, _configuration.ContentFormatDelimiter, TokenType.ContentFormatDelimiter);
         var leftStatementDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftStatementDelimiter, TokenType.LeftStatementDelimiter);
         var rightStatementDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightStatementDelimiter, TokenType.RightStatementDelimiter);
         var leftCommentDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftCommentDelimiter, TokenType.LeftCommentDelimiter);
         var rightCommentDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightCommentDelimiter, TokenType.RightCommentDelimiter);
         
-        var contentCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightContentDelimiter }, _parseOptions);
+        var contentCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightContentDelimiter, _configuration.ContentFormatDelimiter }, _parseOptions);
         var statementCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightStatementDelimiter }, _parseOptions);
         
+        var contentFormatExtractor = new LiteralExtractor(template, new[] { _configuration.RightContentDelimiter });
         var literalExtractor = new LiteralExtractor(template, new[]
         {
             _configuration.LeftContentDelimiter,
@@ -67,8 +70,15 @@ internal class Tokenizer
             },
             {
                 State.Content, [
+                    new PotentialNextState() { Test = contentFormatDelimiterExtractor, NextState = State.ContentFormat },
                     new PotentialNextState() { Test = rightContentDelimiterExtractor, NextState = State.Literal },
                     new PotentialNextState() { Test = contentCSharpExtractor, NextState = State.Content },
+                ]
+            },
+            {
+                State.ContentFormat, [
+                    new PotentialNextState() { Test = rightContentDelimiterExtractor, NextState = State.Literal },
+                    new PotentialNextState() { Test = contentFormatExtractor, NextState = State.ContentFormat },
                 ]
             },
             {

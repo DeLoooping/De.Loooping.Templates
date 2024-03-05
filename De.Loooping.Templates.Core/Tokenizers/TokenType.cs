@@ -4,6 +4,7 @@ internal enum TokenType
 {
     LeftContentDelimiter,
     RightContentDelimiter,
+    ContentFormatDelimiter,
     
     LeftStatementDelimiter,
     RightStatementDelimiter,

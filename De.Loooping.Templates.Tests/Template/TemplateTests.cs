@@ -58,7 +58,7 @@ public class TemplateTests
     public void TemplateConvertsIntegers()
     {
         // setup
-        string content = "{% 42 %}";
+        string content = "{{ 42 }}";
         TemplateBuilder templateBuilder = new TemplateBuilder(content)
             .WithType<int>();
         var template = templateBuilder.Build();
@@ -74,7 +74,7 @@ public class TemplateTests
     public void ContentCanBeFormatted()
     {
         // setup
-        string content = "{% 42.42 : 000.000 %}";
+        string content = "{{ 42.42 :000.000}}";
         TemplateBuilder templateBuilder = new TemplateBuilder(content)
             .WithType<int>();
         var template = templateBuilder.Build();
@@ -86,18 +86,50 @@ public class TemplateTests
         Assert.Equal("042.420", result);
     }
 
+    [Fact(DisplayName = "Content with curly braces can be formatted")]
+    public void ContentWithCurlyBracesCanBeFormatted()
+    {
+        // setup
+        string content = "{{ \"{{}}\".Length :000.000}}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content)
+            .WithType<int>();
+        var template = templateBuilder.Build();
+        
+        // act
+        string result = template();
+        
+        // verify
+        Assert.Equal("004.000", result);
+    }
+
+    [Theory(DisplayName = "Content stringifies expressions")]
+    [InlineData("{{ 2*21 }}", "42")]
+    [InlineData("{{ \"abc\" }}", "abc")]
+    [InlineData("{{ 12.34 }}", "12.34")]
+    [InlineData("{{ typeof(int) }}", "System.Int32")]
+    public void ContentStringifiesExpressions(string content, string expectedResult)
+    {
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+        
+        // act
+        string result = template();
+        
+        // verify
+        Assert.Equal(expectedResult, result);
+    }
+
     [Theory(DisplayName = "Non-expression content throws")]
-    [InlineData("{% var x = 1 %}")]
-    [InlineData("{% yield return \"a\" %}")]
-    [InlineData("""{% "abc"; "def"; %}""")]
+    [InlineData("{{ var x = 1 }}")]
+    [InlineData("{{ yield return \"a\" }}")]
+    [InlineData("""{{ "abc"; }}""")]
     public void NonExpressionContentThrows(string content)
     {
         // setup
         TemplateBuilder templateBuilder = new TemplateBuilder(content)
             .WithType<int>();
-        var template = templateBuilder.Build();
         
         // act and verify
-        Assert.Throws<SyntaxException>(() => template());
+        Assert.Throws<SyntaxErrorException>(() => templateBuilder.Build());
     }
 }

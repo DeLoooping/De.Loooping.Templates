@@ -30,6 +30,8 @@ internal class CSharpExtractor: AbstractTokenExtractor
     
     static CSharpExtractor()
     {
+        // HINT: the C# lexer is not public, so we have to work via reflection
+        
         _MICROSOFT_CODE_ANALYSIS_ASSEMBLY = typeof(SourceCodeKind).Assembly;
         _MICROSOFT_CODE_ANALYSIS_CSHARP_ASSEMBLY = typeof(LanguageVersion).Assembly;
         

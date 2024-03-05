@@ -14,6 +14,7 @@ public class TokenizerTests
         configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("#}");
         configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("{{");
         configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns("}}");
+        configurationMock.Setup(configuration => configuration.ContentFormatDelimiter).Returns(":");
         configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("{%");
         configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("%}");
         return configurationMock;
@@ -26,6 +27,7 @@ public class TokenizerTests
         configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("}");
         configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("<");
         configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns(">");
+        configurationMock.Setup(configuration => configuration.ContentFormatDelimiter).Returns("%");
         configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("[");
         configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("]");
         return configurationMock;
@@ -82,7 +84,7 @@ public class TokenizerTests
         );
     }
 
-    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Content")]
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts content")]
     public void TokenizerExtractsContent()
     {
         // setup
@@ -118,6 +120,46 @@ public class TokenizerTests
             {
                 Assert.Equal(TokenType.CSharp, token.TokenType);
                 Assert.Equal("Content2", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal("}}", token.Value);
+            }
+        );
+    }
+    
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts content with format")]
+    public void TokenizerExtractsContentWithFormat()
+    {
+        // setup
+        var configurationMock = CreateConfigurationMock();
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
+        
+        // act
+        var result = tokenizer.Tokenize("{{ Content : Format }}");
+            
+        // validate
+        Assert.Collection(result,
+            token =>
+            {
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("{{", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" Content ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.ContentFormatDelimiter, token.TokenType);
+                Assert.Equal(":", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal(" Format ", token.Value);
             },
             token =>
             {
@@ -318,6 +360,46 @@ public class TokenizerTests
             {
                 Assert.Equal(TokenType.CSharp, token.TokenType);
                 Assert.Equal(" '>' ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
+                Assert.Equal(">", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("right literal", token.Value);
+            }
+        );
+    }
+
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts Content with format delimiter in single quotes")]
+    public void TokenizerExtractsContentWithFormatDelimiterInSingleQuotes()
+    {
+        // setup
+        var configurationMock = CreateSingleDelimiterConfigurationMock();
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
+
+        // act
+        var result = tokenizer.Tokenize("left literal< '%' >right literal");
+            
+        // validate
+        Assert.Collection(result,
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("left literal", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftContentDelimiter, token.TokenType);
+                Assert.Equal("<", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CSharp, token.TokenType);
+                Assert.Equal(" '%' ", token.Value);
             },
             token =>
             {

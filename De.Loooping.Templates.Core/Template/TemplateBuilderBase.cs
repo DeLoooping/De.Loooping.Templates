@@ -121,6 +121,14 @@ public abstract class TemplateBuilderBase<TDelegate>
 
         // generate syntax tree
         var syntaxTree = CSharpSyntaxTree.ParseText(templateCode, _parseOptions);
+
+        var syntaxDiagnostics = syntaxTree.GetDiagnostics();
+        var syntaxErrors = syntaxDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        if (syntaxErrors.Any())
+        {
+            // TODO: generate errors with location references to the original template
+            throw new SyntaxErrorException("One or more errors were found.", syntaxErrors.Select(e => e.GetMessage()));
+        }
         
         // generate compilation
         var compilation = CSharpCompilation.Create(
@@ -130,12 +138,12 @@ public abstract class TemplateBuilderBase<TDelegate>
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, usings: Usings)
         );
         
-        var diagnostics = compilation.GetDiagnostics();
-        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
-        if (errors.Any())
+        var compilerDiagnostics = compilation.GetDiagnostics();
+        var compilerErrors = compilerDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        if (compilerErrors.Any())
         {
             // TODO: generate errors with location references to the original template
-            throw new CompilerErrorException("One or more errors were found.", errors.Select(e => e.GetMessage()));
+            throw new CompilerErrorException("One or more errors were found.", compilerErrors.Select(e => e.GetMessage()));
         }
         
         // generate assembly
@@ -189,7 +197,7 @@ public abstract class TemplateBuilderBase<TDelegate>
 
         codeBuilder.AppendLine($"public static string {_COMPILATION_METHOD}({String.Join(", ", parametersWithType)}) {{");
         codeBuilder.AppendLine($"   var result = {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parameters)});");
-        codeBuilder.AppendLine($"   return String.Join(\"\", result);");
+        codeBuilder.AppendLine($"   return String.Concat(result);");
         codeBuilder.AppendLine("}");
         
         codeBuilder.AppendLine($"private static {GetFullName(typeof(IEnumerable<string>))} {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parametersWithType)})\n{{");

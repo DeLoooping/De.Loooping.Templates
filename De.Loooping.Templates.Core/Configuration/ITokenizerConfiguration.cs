@@ -4,6 +4,7 @@ public interface ITokenizerConfiguration
 {
     string LeftContentDelimiter { get; }
     string RightContentDelimiter { get; }
+    string ContentFormatDelimiter { get; }
 
     string LeftStatementDelimiter { get; }
     string RightStatementDelimiter { get; }

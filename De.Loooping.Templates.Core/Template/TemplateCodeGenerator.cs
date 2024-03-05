@@ -7,6 +7,12 @@ namespace De.Loooping.Templates.Core.Template;
 
 internal class TemplateCodeGenerator
 {
+    private enum ContentState
+    {
+        Code,
+        Format
+    }
+    
     public string Generate(IEnumerable<Token> tokens)
     {
         StringBuilder sb = new();
@@ -36,7 +42,8 @@ internal class TemplateCodeGenerator
                     EvaluateStatement(tokenEnumerator, codeBuilder);
                     break;
                 default:
-                    throw new SyntaxException(); // TODO: add specific information about position and kind of the error
+                    // TODO: add specific information about position and kind of the error
+                    throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
             }
         }
     }
@@ -54,37 +61,79 @@ internal class TemplateCodeGenerator
                 case TokenType.RightStatementDelimiter:
                     return;
                 default:
-                    throw new SyntaxException(); // TODO: add specific information about position and kind of the error
+                    // TODO: add specific information about position and kind of the error
+                    throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
             }
         }
     }
 
     private void EvaluateContent(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder)
     {
+        ContentState currentState = ContentState.Code;
+        string? code = null;
+        string? format = null;
         while (tokenEnumerator.MoveNext())
         {
             var token = tokenEnumerator.Current;
             switch (token.TokenType)
             {
                 case TokenType.CSharp:
-                    string code = token.Value.Trim();
+                    if (code != null || currentState != ContentState.Code)
+                    {
+                        // TODO: add specific information about position and kind of the error
+                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                    }
+                    
+                    code = token.Value.Trim();
                     if (code.Length == 0)
                     {
-                        // TODO: add specific information about the position of the error
-                        throw new SyntaxException("Content expression must not be empty");
+                        // TODO: add specific information about position and kind of the error
+                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
                     }
+                    
+                    //TODO: check that code is expression
 
-                    if (code.Last() != ';')
+                    /*if (code.Last() != ';')
                     {
                         code += ";";
-                    }
+                    }*/
 
-                    codeBuilder.AppendLine($"yield return {code}");
+                    break;
+                case TokenType.ContentFormatDelimiter:
+                    currentState = ContentState.Format;
+                    break;
+                case TokenType.Literal:
+                    if (format != null || currentState != ContentState.Format || token.Value == null)
+                    {
+                        // TODO: add specific information about position and kind of the error
+                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                    }
+                    format = token.Value;
                     break;
                 case TokenType.RightContentDelimiter:
+                    if (String.IsNullOrEmpty(code))
+                    {
+                        // TODO: add specific information about position and kind of the error
+                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                    }
+
+                    if (format != null)
+                    {
+                        // escape curly braces for use inside interpolated string
+                        format = format
+                            .Replace("{", "{{")
+                            .Replace("}", "}}");
+                        
+                        codeBuilder.AppendLine($"yield return $\"{{{code}:{format}}}\";");
+                    }
+                    else
+                    {
+                        codeBuilder.AppendLine($"yield return $\"{{{code}}}\";");
+                    }
+
                     return;
                 default:
-                    throw new SyntaxException(); // TODO: add specific information about position and kind of the error
+                    throw new SyntaxErrorException("Unknown token", []); // TODO: add specific information about position and kind of the error
             }
         }
     }
@@ -102,7 +151,8 @@ internal class TemplateCodeGenerator
                 case TokenType.RightCommentDelimiter:
                     return;
                 default:
-                    throw new SyntaxException(); // TODO: add specific information about position and kind of the error
+                    // TODO: add specific information about position and kind of the error
+                    throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
             }
         }
     }
