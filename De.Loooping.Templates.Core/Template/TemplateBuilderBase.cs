@@ -169,8 +169,6 @@ public abstract class TemplateBuilderBase<TDelegate>
             var d = CreateDelegate(compilationMethodType);
             return (TDelegate)d;
         }
-        
-        throw new NotImplementedException();
     }
 
     private string GenerateTemplateCode(HashSet<string> usings)
