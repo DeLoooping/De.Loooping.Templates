@@ -33,12 +33,12 @@ public class TemplateTests
         var counter = new Counter();
         string content = "{% for(int i=0;i<3;i++) { %}|{{ counter.CountUp().ToString() }}|\n{% } %}";
 
-        var templateProcessor = new TemplateBuilder<CounterDelegate>(content)
+        var templateBuilder = new TemplateBuilder<CounterDelegate>(content)
             .WithType<object>()
             .WithType<Counter>();
         
         // act
-        var template = templateProcessor.Build();
+        var template = templateBuilder.Build();
         var result = template(counter);
 
         // verify
