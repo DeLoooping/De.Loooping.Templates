@@ -67,7 +67,7 @@ The content of comments is ignored in the output, so you can use them to add des
 
 ### Literals
 
-Literals have no special Syntax or delimiters. Everything that is not a content placeholder, statement placeholder or comment is a literal.  
+Literals have no special syntax or delimiters. Everything that is not a content placeholder, statement placeholder or comment is a literal.  
 Literals will be added to the output as-is, so usually the biggest part of a template consists of literals.
 
 Example:
