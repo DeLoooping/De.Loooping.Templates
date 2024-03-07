@@ -1,7 +1,7 @@
 using De.Loooping.Templates.Core.Tokenizers;
 using De.Loooping.Templates.Core.Tokenizers.TokenExtractors;
 
-namespace De.Loooping.Templates.Tests.Tokenizers.TokenExtractors;
+namespace De.Loooping.Templates.Core.Tests.Tokenizers.TokenExtractors;
 
 public class DelimiterExtractorTests
 {

@@ -3,13 +3,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.2.0-alpha0014</Version>
+    <Version>0.2.0-alpha0015</Version>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-alpha.14+Branch.develop.Sha.47cd34c77f059afbe47c6c2b39a701dfbcc945b7</InformationalVersion>
+    <InformationalVersion>0.2.0-alpha.15+Branch.develop.Sha.eee0cf238cba61514d4a2fd795f7a412f736d7ec</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="De.Loooping.Templates.Tests" />
+    <InternalsVisibleTo Include="De.Loooping.Templates.Core.Tests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.2" />

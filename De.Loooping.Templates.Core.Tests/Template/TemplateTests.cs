@@ -2,7 +2,7 @@ using De.Loooping.Templates.Core.Template;
 using De.Loooping.Templates.Core.TemplateProcessors;
 using Xunit.Abstractions;
 
-namespace De.Loooping.Templates.Tests.Template;
+namespace De.Loooping.Templates.Core.Tests.Template;
 
 [Trait("TestCategory", "UnitTest")]
 public class TemplateTests

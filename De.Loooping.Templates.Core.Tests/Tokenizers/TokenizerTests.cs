@@ -3,7 +3,7 @@ using De.Loooping.Templates.Core.Tokenizers;
 using Microsoft.CodeAnalysis.CSharp;
 using Moq;
 
-namespace De.Loooping.Templates.Tests.Tokenizers;
+namespace De.Loooping.Templates.Core.Tests.Tokenizers;
 
 public class TokenizerTests
 {
