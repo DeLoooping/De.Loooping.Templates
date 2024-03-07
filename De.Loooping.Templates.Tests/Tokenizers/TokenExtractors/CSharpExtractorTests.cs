@@ -41,7 +41,7 @@ public class CSharpExtractorTests
     }
 
     [Fact(DisplayName = $"{nameof(CSharpExtractor)} does extract if code contains newline")]
-    public void CSharpRegularStringExtractorDoesNotExtractIfStringContainsNewline()
+    public void CSharpRegularStringExtractorDoesExtractIfStringContainsNewline()
     {
         // setup
         string toBeScanned = "statement1();\nstatement2();";
@@ -56,6 +56,25 @@ public class CSharpExtractorTests
         Assert.Equal(TokenType.CSharp, token.TokenType);
         Assert.Equal("statement1();\nstatement2();", token.Value);
         Assert.Equal(27, token.CharactersConsumed);
+        Assert.Equal(0, token.StartIndex);
+    }
+
+    [Fact(DisplayName = $"{nameof(CSharpExtractor)} does extract if code contains newline and spaces at end")]
+    public void CSharpRegularStringExtractorDoesExtractIfStringContainsNewlineAndSpacesAtEnd()
+    {
+        // setup
+        string toBeScanned = "statement1();\nstatement2();\n  }";
+        var extractor = new CSharpExtractor(toBeScanned, ["}"], new CSharpParseOptions(LanguageVersion.CSharp12));
+        
+        // act
+        bool isExtracted = extractor.TryExtract(0, out var token);
+
+        // verify
+        Assert.True(isExtracted);
+        Assert.NotNull(token);
+        Assert.Equal(TokenType.CSharp, token.TokenType);
+        Assert.Equal("statement1();\nstatement2();\n  ", token.Value);
+        Assert.Equal(30, token.CharactersConsumed);
         Assert.Equal(0, token.StartIndex);
     }
 }

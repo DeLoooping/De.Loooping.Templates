@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -57,12 +58,16 @@ internal class CSharpExtractor: AbstractTokenExtractor
     #endregion
 
     private readonly List<string> _rightDelimiters;
+    private readonly Regex _rightDelimiterSearchRegex;
     private readonly CSharpParseOptions _parseOptions;
 
     public CSharpExtractor(string toBeScanned, IEnumerable<string> rightDelimiters, CSharpParseOptions parseOptions) : base(toBeScanned)
     {
         _parseOptions = parseOptions;
         _rightDelimiters = rightDelimiters.ToList();
+
+        var escapedDelimiters = _rightDelimiters.Select(Regex.Escape);
+        _rightDelimiterSearchRegex = new Regex($"\\G(?<whitespace>\\s*)(?<delimiter>({String.Join("|", escapedDelimiters.Concat(["$"]))}))");
     }
 
     public override bool TryExtract(int startIndex, out Token? token)
@@ -73,9 +78,12 @@ internal class CSharpExtractor: AbstractTokenExtractor
         int index = startIndex;
         do
         {
-            if (_rightDelimiters.Any(d => index + d.Length <= ToBeScanned.Length && ToBeScanned.Substring(index, d.Length) == d))
+            var rightDelimiterMatch = _rightDelimiterSearchRegex.Match(ToBeScanned, index);
+            if (rightDelimiterMatch.Success)
             {
-                // right delimiter found
+                // right delimiter or end of string found
+                string whitespace = rightDelimiterMatch.Groups["whitespace"].Value;
+                index += whitespace.Length;
                 break;
             }
 

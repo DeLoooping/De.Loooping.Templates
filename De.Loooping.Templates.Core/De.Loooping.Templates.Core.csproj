@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.2.0-alpha0011</Version>
+    <Version>0.2.0-alpha0012</Version>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-alpha.11+Branch.develop.Sha.3fd3fdad34a12d8fbb0c2a2fe97ced0fc843e780</InformationalVersion>
+    <InformationalVersion>0.2.0-alpha.12+Branch.develop.Sha.6b7fb24982d4d9a94debf4ab9ad98c6bd0850f95</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="De.Loooping.Templates.Tests" />

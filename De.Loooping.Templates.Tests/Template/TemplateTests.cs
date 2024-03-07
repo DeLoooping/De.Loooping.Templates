@@ -1,12 +1,19 @@
-using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Template;
 using De.Loooping.Templates.Core.TemplateProcessors;
+using Xunit.Abstractions;
 
 namespace De.Loooping.Templates.Tests.Template;
 
 [Trait("TestCategory", "UnitTest")]
 public class TemplateTests
 {
+    private readonly ITestOutputHelper _outputHelper;
+
+    public TemplateTests(ITestOutputHelper outputHelper)
+    {
+        _outputHelper = outputHelper;
+    }
+    
     public class Counter
     {
         private int _i = 0;
@@ -119,6 +126,62 @@ public class TemplateTests
         Assert.Equal(expectedResult, result);
     }
 
+    [Fact(DisplayName = "Multiline content works")]
+    public void MultilineContentWorks()
+    {
+        string content = "{{ \"abc\"\n.ToUpper()\n+\"DEF\"\n.ToLower() }}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+        
+        // act
+        string result = template();
+        
+        // verify
+        Assert.Equal("ABCdef", result);
+    }
+
+    [Fact(DisplayName = "Content with newline and spaces at end works")]
+    public void ContentWithNewlineAndSpacesAtEndWorks()
+    {
+        string content = "{{ \"abc\"\n.ToUpper()\n  }}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+        
+        // act
+        string result = template();
+        
+        // verify
+        Assert.Equal("ABC", result);
+    }
+
+    [Fact(DisplayName = "Multiline statement works")]
+    public void MultilineStatementWorks()
+    {
+        string content = "{% yield return \"abc\"\n.ToUpper();\nyield return \"DEF\".ToLower(); %}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+        
+        // act
+        string result = template();
+        
+        // verify
+        Assert.Equal("ABCdef", result);
+    }
+
+    [Fact(DisplayName = "Statement with newline and spaces at end works")]
+    public void StatementWithNewlineAndSpacesAtEndWorks()
+    {
+        string content = "{% yield return \"abc\"\n.ToUpper();\n  %}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+        
+        // act
+        string result = template();
+        
+        // verify
+        Assert.Equal("ABC", result);
+    }
+
     [Theory(DisplayName = "Non-expression content throws")]
     [InlineData("{{ var x = 1 }}")]
     [InlineData("{{ yield return \"a\" }}")]
@@ -131,5 +194,46 @@ public class TemplateTests
         
         // act and verify
         Assert.Throws<SyntaxErrorException>(() => templateBuilder.Build());
+    }
+
+    [Theory(DisplayName = $"Trying to escape the content element fails with a {nameof(SyntaxErrorException)}")]
+    [InlineData("""{{ 42}"; yield return "escaped"; yield return $"{42 }}""")]
+    [InlineData("""{{ 42"; yield return "escaped"; yield return "42 }}""")]
+    [InlineData("""{{ 42"; yield return "escaped"; yield return @"42 }}""")]
+    [InlineData(""""{{ 42"""; yield return "escaped"; yield return """42 }}"""")]
+    public void CannotEscapeContentElement(string content)
+    {
+        // setup
+        TemplateBuilder templateBuilder = new TemplateBuilder(content)
+            .WithType<int>()
+            .WithType<string>();
+
+        // act and verify
+        Assert.Throws<SyntaxErrorException>(() =>
+        {
+            var template = templateBuilder.Build();
+            var result = template();
+            _outputHelper.WriteLine($"No {nameof(SyntaxErrorException)} was thrown.\nTemplate result is: '{result}'");
+            Assert.NotEqual("42escaped42", result);
+        });
+    }
+
+    [Theory(DisplayName = $"Trying to escape the statement element fails with a {nameof(SyntaxErrorException)}")]
+    [InlineData("{% yield return \"42\"; yield return Test(); }\n private static string Test() { return \"escaped\";\n %}")]
+    public void CannotEscapeStatementElement(string content)
+    {
+        // setup
+        TemplateBuilder templateBuilder = new TemplateBuilder(content)
+            .WithType<int>()
+            .WithType<string>();
+
+        // act and verify
+        Assert.Throws<SyntaxErrorException>(() =>
+        {
+            var template = templateBuilder.Build();
+            var result = template();
+            _outputHelper.WriteLine($"No {nameof(SyntaxErrorException)} was thrown.\nTemplate result is: '{result}'");
+            Assert.NotEqual("42escaped", result);
+        });
     }
 }
