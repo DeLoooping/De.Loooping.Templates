@@ -2,6 +2,10 @@
 
 This is a slim templating library implemented in .NET 8. It provides a simple way to generate text-based output by replacing placeholders in a template file or string with actual values.
 
+## :warning: SECURITY WARNING :warning:
+
+Templates can execute arbitrary code. There is no check for malicious content inside the templates.  
+DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 
 ## Features
 - Easy syntax, inspired by Jinja2
@@ -36,7 +40,7 @@ Expression and format string can stretch over several lines, but the format stri
 
 
 ### Statement placeholders
-Syntax: `{% here.comes.a.statement(); or.maybe = more.than.one; %}
+Syntax: `{% here.comes.a.statement(); or.maybe = more.than.one; %}`
 
 Statement placeholders can contain any C# code that is allowed inside a method body. You can use it for example to create loops.
 
@@ -46,9 +50,10 @@ The first statement block contains the for loop and the opening `{`.
 The content block in the middle `{{ i }}` just outputs the current value of `i`.
 The statement block at the end finishes the loop block with a closing `}`.
 
-In case you need to output some values from inside a statement block, this is also possible by using `yield return`, but the returned value must be a string.  
+In case you need to output some values from inside a statement block, this is also possible by using `yield return`, but the returned value must be a string.
+
 Example:
-```
+```C#
 {%
 yield return "a";
 yield return "b";
@@ -67,7 +72,7 @@ The content of comments is ignored in the output, so you can use them to add des
 
 ### Literals
 
-Literals have no special syntax or delimiters. Everything that is not a content placeholder, statement placeholder or comment is a literal.  
+Literals have no special Syntax or delimiters. Everything that is not a content placeholder, statement placeholder or comment is a literal.  
 Literals will be added to the output as-is, so usually the biggest part of a template consists of literals.
 
 Example:
@@ -77,7 +82,7 @@ Example:
 ## Working with templates in your code
 
 Building and using a template from a string is as easy as this:  
-```
+```C#
 public void Main()
 {
   string templateString = "{{ 2*21 }}";
@@ -89,7 +94,7 @@ public void Main()
 ```
 
 Most of the time you will want to pass some data to your template. For this, you have to define a delegate with result type `string` and use it as a type argument when creating the `TemplateBuilder`:  
-```
+```C#
 private delegate string MyTemplate(int a, string b);
 
 public void Main()
@@ -109,10 +114,11 @@ In seldom cases you might need to output special character sequences that interf
 One solution to this is to output your needed output from inside a content or statement placeholder:
 - `{{ "{{ lalala }}" }}` will output `{{ lalala }}`
 - `{% yield return "{% lalala %}"; %}` will output `{% lalala %}`
+
 but this looks nasty and is very inconvenient.
 
 Another solution for this is to overwrite the default delimiters with something you don't need to output from your template:
-```
+```C#
 public void Main()
 {
   string templateString = "{{ 2*21 }}";
@@ -129,8 +135,8 @@ public void Main()
 
 ### Adding custom types
 
-The TemplateBuilder will only add references and [`using` directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-directive) for the most basic types like `int` and `string`, as well as all types provided in the delegate type argument (`TDelegate` in `new TemplateBuilder<TDelegate>()`). If you want to use other types (like a generic `List<T>` for example), you have to add them to the `TemplateBuilder` before building the template or it will throw an exception:  
-```
+The TemplateBuilder will only add references and [`using` directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-directive) for the most basic types like `int` and `string`, as well as references of all types provided in the delegate type argument (`TDelegate` in `new TemplateBuilder<TDelegate>()`). If you want to use or declare other types (like a generic `List<T>` for example), you have to add them to the `TemplateBuilder` before building the template or it will throw an exception:  
+```C#
 public void Main()
 {
   string templateString = "{{ DateTime.Parse("2024-03-07"):dd.MM.yyyy}}";
@@ -146,5 +152,5 @@ public void Main()
 You can also use `TemplateBuilder.WithReference(Assembly reference)` and/or `TemplateBuilder.WithUsing(String @using)` to add these separately.
 
 
-## Still to do:
+## Still to do
 - Add meaningful expception messages in case of syntax or compile-time errors

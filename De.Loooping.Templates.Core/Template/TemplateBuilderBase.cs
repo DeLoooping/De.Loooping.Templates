@@ -23,7 +23,9 @@ public abstract class TemplateBuilderBase<TDelegate>
     private readonly TemplateProcessorConfiguration _configuration;
     private readonly string _template;
     private readonly CSharpParseOptions _parseOptions;
-    
+
+    private readonly Lazy<List<KeyValuePair<string, Type>>> _parameters;
+
     #region convenience methods
     public void AddType<T>()
     {
@@ -41,6 +43,8 @@ public abstract class TemplateBuilderBase<TDelegate>
     }
     #endregion
 
+    private IEnumerable<KeyValuePair<string, Type>> Parameters => _parameters.Value;
+    
     public HashSet<string> Usings { get; } = new();
     public HashSet<Assembly> References { get; } = new();
 
@@ -70,6 +74,8 @@ public abstract class TemplateBuilderBase<TDelegate>
         _parseOptions = CSharpParseOptions.Default
             .WithLanguageVersion(_configuration.LanguageVersion)
             .WithKind(SourceCodeKind.Regular);
+
+        _parameters = new Lazy<List<KeyValuePair<string, Type>>>(() => GetParameters().ToList());
     }
 
     private void AddDefaultReferences(HashSet<Assembly> references)
@@ -79,6 +85,15 @@ public abstract class TemplateBuilderBase<TDelegate>
         references.Add(typeof(Object).Assembly);
         references.Add(typeof(IEnumerable<>).Assembly);
         references.Add(AppDomain.CurrentDomain.GetAssemblies().First(a=>a.GetName().Name == "System.Runtime"));
+    }
+
+    private void AddParameterTypeReferences(HashSet<Assembly> references)
+    {
+        foreach (var kvp in Parameters)
+        {
+            Type type = kvp.Value;
+            references.Add(type.Assembly);
+        }
     }
 
     private void AddDefaultUsings(HashSet<string> usings)
@@ -111,6 +126,7 @@ public abstract class TemplateBuilderBase<TDelegate>
     {
         HashSet<Assembly> references = References.ToHashSet();
         AddDefaultReferences(references);
+        AddParameterTypeReferences(references);
 
         HashSet<string> usings = Usings.ToHashSet();
         AddDefaultUsings(usings);
@@ -177,7 +193,7 @@ public abstract class TemplateBuilderBase<TDelegate>
         
         List<string> parameters = new();
         List<string> parametersWithType = new();
-        foreach (var kvp in GetParameters())
+        foreach (var kvp in Parameters)
         {
             string name = kvp.Key;
             Type type = kvp.Value;

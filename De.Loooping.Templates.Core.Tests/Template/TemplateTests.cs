@@ -45,6 +45,23 @@ public class TemplateTests
         Assert.Equal("|0|\n|1|\n|2|\n", result);
     }
 
+    [Fact(DisplayName = "Template implicitely adds references to input type assemblies")]
+    public void TemplateAddsReferencesOfInputTypes()
+    {
+        // setup
+        var counter = new Counter();
+        string content = "{{ counter.CountUp() }}{{ counter.CountUp() }}";
+
+        var templateBuilder = new TemplateBuilder<CounterDelegate>(content);
+        
+        // act
+        var template = templateBuilder.Build();
+        var result = template(counter);
+
+        // verify
+        Assert.Equal("01", result);
+    }
+
     [Fact(DisplayName = "Template processes local variables")]
     public void TemplateProcessesLocalVariables()
     {
