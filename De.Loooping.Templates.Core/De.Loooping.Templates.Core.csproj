@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.3.0-alpha0002</Version>
+    <Version>0.3.0-alpha0003</Version>
     <AssemblyVersion>0.3.0.0</AssemblyVersion>
     <FileVersion>0.3.0.0</FileVersion>
-    <InformationalVersion>0.3.0-alpha.2+Branch.develop.Sha.16e515fc507e642b785562a2a680a2d3b8f0f0aa</InformationalVersion>
+    <InformationalVersion>0.3.0-alpha.3+Branch.develop.Sha.c646cd405b0ebcede053f5a50b1dcddddf5de797</InformationalVersion>
     <Authors>Christopher Jung</Authors>
     <Description>De.Loooping.Templates - A Jinja2 inspired template engine for .NET</Description>
     <Copyright>Copyright (c) 2024 Christopher Jung &amp; contributers</Copyright>
@@ -14,10 +14,12 @@
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/DeLoooping/De.Loooping.Templates</PackageProjectUrl>
     <PackageTags>template;templates;template-engine;templating;jinja2</PackageTags>
+    <PackageIcon>icon.128x128.png</PackageIcon>
   </PropertyGroup>
   <ItemGroup>
     <None Include="../README.md" Pack="true" PackagePath="/" />
     <None Include="../LICENSE.md" Pack="true" PackagePath="/" />
+    <None Include="../icon.128x128.png" Pack="true" PackagePath="/" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="De.Loooping.Templates.Core.Tests" />
