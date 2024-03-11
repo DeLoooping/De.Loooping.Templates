@@ -1,6 +1,9 @@
 using System.Text;
+using System.Text.RegularExpressions;
+using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.TemplateProcessors;
 using De.Loooping.Templates.Core.Tokenizers;
+using De.Loooping.Templates.Core.Tools;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -9,20 +12,73 @@ namespace De.Loooping.Templates.Core.Template;
 
 internal class TemplateCodeGenerator
 {
+    private const string _COMPILATION_ENUMERABLE_METHOD = "GetParts";
+
+    private readonly Regex _backslashEscaping = new Regex(@"\G(?<escape>\\)(?<escaped>.)", RegexOptions.Compiled);
+    private readonly Regex _bracketEscaping = new Regex(@"\G((?<escape>\{)(?<escaped>\{)|(?<escape>\})(?<escaped>\}))", RegexOptions.Compiled);
+    
+    private readonly string _namespaceName;
+    private readonly string _className;
+    private readonly string _methodName;
+
     private enum ContentState
     {
         Code,
         Format
     }
+
+    public TemplateCodeGenerator(string namespaceName, string className, string methodName)
+    {
+        _namespaceName = namespaceName;
+        _className = className;
+        _methodName = methodName;
+    }
     
-    public string Generate(IEnumerable<Token> tokens)
+    private string GetFullName(Type type)
+    {
+        return TypeNameResolver.GetFullName(type);
+    }
+    
+    public string Generate(IEnumerable<Token> tokens, IEnumerable<KeyValuePair<string,Type>> parameters, IEnumerable<string> usings, out CodeMapper codeMapper)
     {
         StringBuilder sb = new();
         IEnumerator<Token> enumerator = tokens.GetEnumerator();
-        EvaluateRoot(enumerator, sb);
-        string code = sb.ToString();
+
+        List<string> parameterNames = new();
+        List<string> parametersWithType = new();
+        foreach (var kvp in parameters)
+        {
+            string name = kvp.Key;
+            Type type = kvp.Value;
+            parameterNames.Add(name);
+            parametersWithType.Add($"{GetFullName(type)} {name}");
+        }
+
+        foreach (string u in usings)
+        {
+            sb.AppendLine($"using {u};");
+        }
+
+        sb.AppendLine($"namespace {_namespaceName};\n");
+        sb.AppendLine($"public class {_className} {{");
+
+        sb.AppendLine($"public static string {_methodName}({String.Join(", ", parametersWithType)}) {{");
+        sb.AppendLine($"   var result = {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parameterNames)});");
+        sb.AppendLine($"   return String.Concat(result);");
+        sb.AppendLine("}");
         
-        AssureCodeIsOneStatementBlock(code);
+        sb.AppendLine($"private static {GetFullName(typeof(IEnumerable<string>))} {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parametersWithType)})\n{{");
+        
+        codeMapper = new CodeMapper();
+        StringBuilder bodyStringBuilder = new();
+        EvaluateRoot(enumerator, bodyStringBuilder, codeMapper);
+        string body = bodyStringBuilder.ToString();        
+        AssureCodeIsOneStatementBlock(body);
+        sb.AppendLine(body);
+        
+        sb.AppendLine("}\n}");
+
+        string code = sb.ToString();
 
         return code;
     }
@@ -43,7 +99,7 @@ internal class TemplateCodeGenerator
         }
     }
 
-    private void EvaluateRoot(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder)
+    private void EvaluateRoot(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder, CodeMapper codeMapper)
     {
         while (tokenEnumerator.MoveNext())
         {
@@ -51,17 +107,23 @@ internal class TemplateCodeGenerator
             switch (token.TokenType)
             {
                 case TokenType.Literal:
-                    string literal = SymbolDisplay.FormatLiteral(token.Value, true);
-                    codeBuilder.AppendLine($"yield return {literal};");
+                    string literal = SymbolDisplay.FormatLiteral(token.Value, false);
+                    codeMapper.AddGeneratedCodeFromNil("yield return \"");
+                    codeMapper.AddEscapedUserProvidedCode(literal, _backslashEscaping);
+                    codeMapper.AddGeneratedCodeFromNil("\";\n");
+                    codeBuilder.Append($"yield return \"{literal}\";\n");
                     break;
                 case TokenType.LeftCommentDelimiter:
-                    EvaluateComment(tokenEnumerator, codeBuilder);
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateComment(tokenEnumerator, codeBuilder, codeMapper);
                     break;
                 case TokenType.LeftContentDelimiter:
-                    EvaluateContent(tokenEnumerator, codeBuilder);
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateContent(tokenEnumerator, codeBuilder, codeMapper);
                     break;
                 case TokenType.LeftStatementDelimiter:
-                    EvaluateStatement(tokenEnumerator, codeBuilder);
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateStatement(tokenEnumerator, codeBuilder, codeMapper);
                     break;
                 default:
                     // TODO: add specific information about position and kind of the error
@@ -70,7 +132,7 @@ internal class TemplateCodeGenerator
         }
     }
 
-    private void EvaluateStatement(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder)
+    private void EvaluateStatement(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder, CodeMapper codeMapper)
     {
         while (tokenEnumerator.MoveNext())
         {
@@ -78,9 +140,12 @@ internal class TemplateCodeGenerator
             switch (token.TokenType)
             {
                 case TokenType.CSharp:
-                    codeBuilder.AppendLine(token.Value);
+                    string code = $"{token.Value}\n";
+                    codeMapper.AddUserProvidedCode(code);
+                    codeBuilder.Append(code);
                     break;
                 case TokenType.RightStatementDelimiter:
+                    codeMapper.AddNilGeneratingCode(token.Value);
                     return;
                 default:
                     // TODO: add specific information about position and kind of the error
@@ -89,7 +154,7 @@ internal class TemplateCodeGenerator
         }
     }
 
-    private void EvaluateContent(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder)
+    private void EvaluateContent(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder, CodeMapper codeMapper)
     {
         ContentState currentState = ContentState.Code;
         string? code = null;
@@ -106,11 +171,11 @@ internal class TemplateCodeGenerator
                         throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
                     }
                     
-                    code = token.Value.Trim();
-                    if (code.Length == 0)
+                    code = token.Value;
+                    if (String.IsNullOrWhiteSpace(code))
                     {
                         // TODO: add specific information about position and kind of the error
-                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{code}'", []);
                     }
 
                     AssureCodeIsExpression(code);
@@ -141,12 +206,20 @@ internal class TemplateCodeGenerator
                             .Replace("{", "{{")
                             .Replace("}", "}}");
                         
-                        codeBuilder.AppendLine($"yield return $\"{{{code}:{format}}}\";");
+                        codeMapper.AddGeneratedCodeFromNil("yield return $\\\"{{");
+                        codeMapper.AddUserProvidedCode($"{code}:{format}");
+                        codeMapper.AddGeneratedCodeFromNil("\";\n");
+                        codeBuilder.Append($"yield return $\"{{{code}:{format}}}\";\n");
                     }
                     else
                     {
-                        codeBuilder.AppendLine($"yield return $\"{{{code}}}\";");
+                        codeMapper.AddGeneratedCodeFromNil("yield return $\\\"{{");
+                        codeMapper.AddUserProvidedCode(code);
+                        codeMapper.AddGeneratedCodeFromNil("\";\n");
+                        codeBuilder.Append($"yield return $\"{{{code}}}\";\n");
                     }
+
+                    codeMapper.AddNilGeneratingCode(token.Value);
 
                     return;
                 default:
@@ -171,7 +244,7 @@ internal class TemplateCodeGenerator
         }
     }
 
-    private void EvaluateComment(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder)
+    private void EvaluateComment(IEnumerator<Token> tokenEnumerator, StringBuilder codeBuilder, CodeMapper codeMapper)
     {
         while (tokenEnumerator.MoveNext())
         {
@@ -180,8 +253,10 @@ internal class TemplateCodeGenerator
             {
                 case TokenType.Literal:
                     // do nothing
+                    codeMapper.AddNilGeneratingCode(token.Value);
                     break;
                 case TokenType.RightCommentDelimiter:
+                    codeMapper.AddNilGeneratingCode(token.Value);
                     return;
                 default:
                     // TODO: add specific information about position and kind of the error

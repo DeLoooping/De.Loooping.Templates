@@ -1,7 +1,8 @@
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Configuration;
+using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.TemplateProcessors;
 using De.Loooping.Templates.Core.Tokenizers;
 using De.Loooping.Templates.Core.Tools;
@@ -17,7 +18,6 @@ public abstract class TemplateBuilderBase<TDelegate>
 {
     private const string _COMPILATION_NAMESPACE = "TemplateCompilationNamespace";
     private const string _COMPILATION_CLASS = "TemplateCompilationClass";
-    private const string _COMPILATION_ENUMERABLE_METHOD = "GetParts";
     private const string _COMPILATION_METHOD = "Process";
 
     private readonly TemplateProcessorConfiguration _configuration;
@@ -57,7 +57,7 @@ public abstract class TemplateBuilderBase<TDelegate>
         }
     }
 
-    public TemplateBuilderBase(string template, TemplateProcessorConfiguration? configuration = null)
+    internal TemplateBuilderBase(string template, TemplateProcessorConfiguration? configuration = null)
     {
         if (!typeof(TDelegate).IsSubclassOf(typeof(Delegate)))
         {
@@ -133,7 +133,7 @@ public abstract class TemplateBuilderBase<TDelegate>
 
         
         // generate code
-        var templateCode = GenerateTemplateCode(usings);
+        var templateCode = GenerateTemplateCode(usings, out CodeMapper codeMapper);
 
         // generate syntax tree
         var syntaxTree = CSharpSyntaxTree.ParseText(templateCode, _parseOptions);
@@ -187,45 +187,15 @@ public abstract class TemplateBuilderBase<TDelegate>
         }
     }
 
-    private string GenerateTemplateCode(HashSet<string> usings)
+    private string GenerateTemplateCode(HashSet<string> usings, out CodeMapper codeMapping)
     {
-        var codeBuilder = new StringBuilder();
         
-        List<string> parameters = new();
-        List<string> parametersWithType = new();
-        foreach (var kvp in Parameters)
-        {
-            string name = kvp.Key;
-            Type type = kvp.Value;
-            parameters.Add(name);
-            parametersWithType.Add($"{GetFullName(type)} {name}");
-        }
-
-        foreach (string u in usings)
-        {
-            codeBuilder.AppendLine($"using {u};");
-        }
-
-        codeBuilder.AppendLine($"namespace {_COMPILATION_NAMESPACE};\n");
-        codeBuilder.AppendLine($"public class {_COMPILATION_CLASS} {{");
-
-        codeBuilder.AppendLine($"public static string {_COMPILATION_METHOD}({String.Join(", ", parametersWithType)}) {{");
-        codeBuilder.AppendLine($"   var result = {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parameters)});");
-        codeBuilder.AppendLine($"   return String.Concat(result);");
-        codeBuilder.AppendLine("}");
-        
-        codeBuilder.AppendLine($"private static {GetFullName(typeof(IEnumerable<string>))} {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parametersWithType)})\n{{");
-
         Tokenizer tokenizer = new Tokenizer(_configuration, _parseOptions);
         List<Token> tokens = tokenizer.Tokenize(_template);
 
-        TemplateCodeGenerator templateCodeGenerator = new();
-        string generatedCode = templateCodeGenerator.Generate(tokens);
-        codeBuilder.AppendLine(generatedCode);
-        
-        codeBuilder.AppendLine("}\n}");
+        TemplateCodeGenerator templateCodeGenerator = new(_COMPILATION_NAMESPACE, _COMPILATION_CLASS, _COMPILATION_METHOD);
+        string templateCode = templateCodeGenerator.Generate(tokens, Parameters, usings, out codeMapping);
 
-        string templateCode = codeBuilder.ToString();
         return templateCode;
     }
 

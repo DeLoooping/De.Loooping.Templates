@@ -1,3 +1,5 @@
+using De.Loooping.Templates.Core.Diagnostic;
+
 namespace De.Loooping.Templates.Core.TemplateProcessors;
 
 public class SyntaxErrorException: Exception

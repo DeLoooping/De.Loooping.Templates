@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.3.0-alpha0003</Version>
+    <Version>0.3.0-alpha0004</Version>
     <AssemblyVersion>0.3.0.0</AssemblyVersion>
     <FileVersion>0.3.0.0</FileVersion>
-    <InformationalVersion>0.3.0-alpha.3+Branch.develop.Sha.c646cd405b0ebcede053f5a50b1dcddddf5de797</InformationalVersion>
+    <InformationalVersion>0.3.0-alpha.4+Branch.develop.Sha.d706fb76ef01c363a7bb780b258d0f64fa9c69b4</InformationalVersion>
     <Authors>Christopher Jung</Authors>
     <Description>De.Loooping.Templates - A Jinja2 inspired template engine for .NET</Description>
     <Copyright>Copyright (c) 2024 Christopher Jung &amp; contributers</Copyright>
