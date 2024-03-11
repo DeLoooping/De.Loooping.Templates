@@ -44,10 +44,13 @@ internal class CodeMapper
             return x.GeneratedCodeStart.CompareTo(y.GeneratedCodeStart);
         }
     }
+
+    private StringBuilder _generatedCode = new();
+    private StringBuilder _generatingCode = new();
     
-    private int _generatingCodeLength = 0;
+    //private int _generatingCodeLength = 0;
     private int _generatingCodeNewlines = 0;
-    private int _generatedCodeLength = 0;
+    //private int _generatedCodeLength = 0;
 
     private readonly SortedSet<Newline> _generatingCodeNewlinePositions = new(new NewlinePositionComparer());
     private readonly List<int> _generatedCodeNewlinePositions = new();
@@ -55,6 +58,9 @@ internal class CodeMapper
 
     private readonly Regex _newLineRegex = new Regex("\n", RegexOptions.Compiled);
 
+    public string GeneratedCode => _generatedCode.ToString();
+    public string GeneratingCode => _generatingCode.ToString();
+    
     private void AddNewlinePositionsForGeneratingCode(string generatingCode)
     {
         foreach (Match match in _newLineRegex.Matches(generatingCode))
@@ -62,7 +68,7 @@ internal class CodeMapper
             var newline = new Newline()
             {
                 Index = _generatingCodeNewlines,
-                CharPosition = match.Index + _generatedCodeLength,
+                CharPosition = match.Index + _generatingCode.Length,
             };
             _generatingCodeNewlinePositions.Add(newline);
             _generatingCodeNewlines++;
@@ -73,7 +79,7 @@ internal class CodeMapper
     {
         foreach (Match match in _newLineRegex.Matches(generatedCode))
         {
-            _generatedCodeNewlinePositions.Add(match.Index + _generatedCodeLength);
+            _generatedCodeNewlinePositions.Add(match.Index + _generatedCode.Length);
         }
     }
 
@@ -85,17 +91,16 @@ internal class CodeMapper
     {
         AddNewlinePositionsForGeneratingCode(generatingCode);
 
-        int generatingCodeEnd = _generatingCodeLength + generatingCode.Length;
         _codeMapping.Add(new CodeMapping()
         {
-            GeneratedCodeStart = _generatedCodeLength,
-            GeneratedCodeEnd = _generatedCodeLength,
-            GeneratingCodeStart = _generatingCodeLength,
-            GeneratingCodeEnd = generatingCodeEnd,
+            GeneratedCodeStart = _generatedCode.Length,
+            GeneratedCodeEnd = _generatedCode.Length,
+            GeneratingCodeStart = _generatingCode.Length,
+            GeneratingCodeEnd = _generatingCode.Length + generatingCode.Length,
             CodeType = CodeType.NilGenerating
         });
         
-        _generatingCodeLength = generatingCodeEnd;
+        _generatingCode.Append(generatingCode);
     }
 
     /// <summary>
@@ -107,17 +112,16 @@ internal class CodeMapper
     {
         AddNewlinePositionsForGeneratedCode(generatedCode);
 
-        int generatedCodeEnd = _generatedCodeLength + generatedCode.Length;
         _codeMapping.Add(new CodeMapping()
         {
-            GeneratedCodeStart = _generatedCodeLength,
-            GeneratedCodeEnd = generatedCodeEnd,
-            GeneratingCodeStart = _generatingCodeLength,
-            GeneratingCodeEnd = _generatingCodeLength,
+            GeneratedCodeStart = _generatedCode.Length,
+            GeneratedCodeEnd = _generatedCode.Length + generatedCode.Length,
+            GeneratingCodeStart = _generatingCode.Length,
+            GeneratingCodeEnd = _generatingCode.Length,
             CodeType = codeType
         });
 
-        _generatedCodeLength = generatedCodeEnd;
+        _generatedCode.Append(generatedCode);
     }
 
     /// <summary>
@@ -129,19 +133,17 @@ internal class CodeMapper
         AddNewlinePositionsForGeneratingCode(code);
         AddNewlinePositionsForGeneratedCode(code);
         
-        int generatingCodeEnd = _generatingCodeLength + code.Length;
-        int generatedCodeEnd = _generatedCodeLength + code.Length;
         _codeMapping.Add(new CodeMapping()
         {
-            GeneratedCodeStart = _generatedCodeLength,
-            GeneratedCodeEnd = generatedCodeEnd,
-            GeneratingCodeStart = _generatingCodeLength,
-            GeneratingCodeEnd = generatingCodeEnd,
+            GeneratedCodeStart = _generatedCode.Length,
+            GeneratedCodeEnd = _generatedCode.Length + code.Length,
+            GeneratingCodeStart = _generatingCode.Length,
+            GeneratingCodeEnd = _generatingCode.Length + code.Length,
             CodeType = CodeType.UserProvided
         });
 
-        _generatedCodeLength = generatedCodeEnd;
-        _generatingCodeLength = generatingCodeEnd;
+        _generatedCode.Append(code);
+        _generatingCode.Append(code);
     }
     
     /// <summary>
@@ -223,7 +225,7 @@ internal class CodeMapper
         int characterOffsetFromMappingStart = characterPositionInGeneratedCode - mapping.GeneratedCodeStart;
 
         int characterPositionInGeneratingCode = mapping.GeneratingCodeStart + characterOffsetFromMappingStart;
-        var lastNewline = GetLastNewlineInGeneratingCode(characterPositionInGeneratingCode);
+        var lastNewline = GetLastNewlineInGeneratingCodeBefore(characterPositionInGeneratingCode);
 
         int lastNewlineIndex = lastNewline != null ? lastNewline.Index + 1 : 0;
         int column = characterPositionInGeneratingCode - (lastNewline?.CharPosition ?? 0);
@@ -231,16 +233,16 @@ internal class CodeMapper
         return new CodePosition(lastNewlineIndex, column);
     }
 
-    private Newline? GetLastNewlineInGeneratingCode(int characterPositionInGeneratingCode)
+    private Newline? GetLastNewlineInGeneratingCodeBefore(int characterPositionInGeneratingCode)
     {
-        if (_generatingCodeNewlinePositions.Count == 0 || _generatingCodeNewlinePositions.Min!.CharPosition > characterPositionInGeneratingCode)
+        if (_generatingCodeNewlinePositions.Count == 0 || _generatingCodeNewlinePositions.Min!.CharPosition >= characterPositionInGeneratingCode)
         {
             return null;
         }
-        
+
         var lastNewline = _generatingCodeNewlinePositions.GetViewBetween(_generatingCodeNewlinePositions.Min, new Newline()
         {
-            CharPosition = characterPositionInGeneratingCode,
+            CharPosition = characterPositionInGeneratingCode - 1,
             Index = 0 // not needed for comparison
         }).Max;
         return lastNewline;
