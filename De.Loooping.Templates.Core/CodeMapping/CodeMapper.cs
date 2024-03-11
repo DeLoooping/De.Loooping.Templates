@@ -59,7 +59,10 @@ internal class CodeMapper
     private readonly Regex _newLineRegex = new Regex("\n", RegexOptions.Compiled);
 
     public string GeneratedCode => _generatedCode.ToString();
+    public int GeneratedCodeLength => _generatedCode.Length;
+    
     public string GeneratingCode => _generatingCode.ToString();
+    public int GeneratingCodeLength => _generatingCode.Length;
     
     private void AddNewlinePositionsForGeneratingCode(string generatingCode)
     {
