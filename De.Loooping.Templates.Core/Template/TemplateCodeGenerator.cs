@@ -1,6 +1,6 @@
-using System.Text;
 using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.CodeMapping;
+using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.TemplateProcessors;
 using De.Loooping.Templates.Core.Tokenizers;
 using De.Loooping.Templates.Core.Tools;
@@ -78,12 +78,12 @@ internal class TemplateCodeGenerator
         
         string code = codeMapper.GeneratedCode;
         string body = code.Substring(bodyStart, bodyEnd - bodyStart);
-        AssureCodeIsOneStatementBlock(body);
+        AssureCodeIsOneStatementBlock(body, codeMapper, bodyStart);
 
         return code;
     }
 
-    private static void AssureCodeIsOneStatementBlock(string code)
+    private static void AssureCodeIsOneStatementBlock(string code, CodeMapper codeMapper, int startPosition)
     {
         // assure that code cannot not escape the method body
         var statementSyntax = SyntaxFactory.ParseStatement($"{{{code}}}");
@@ -93,9 +93,8 @@ internal class TemplateCodeGenerator
             .ToList();
         if (!(statementSyntax is BlockSyntax) || statementSyntax.Span != statementSyntax.FullSpan || statementSyntaxErrors.Any())
         {
-            // TODO: add specific information about position and kind of the error
-            throw new SyntaxErrorException("Code is not a statement block",
-                statementSyntaxErrors.Select(e=>e.GetMessage()));
+            var errors = statementSyntaxErrors.Select(e=>e.ToError(codeMapper, startPosition));
+            throw new SyntaxErrorException("Code is not a statement block", errors);
         }
     }
 
@@ -111,7 +110,6 @@ internal class TemplateCodeGenerator
                     codeMapper.AddGeneratedCodeFromNil("yield return \"");
                     codeMapper.AddEscapedUserProvidedCode(literal, _backslashEscaping);
                     codeMapper.AddGeneratedCodeFromNil("\";\n");
-                    //codeBuilder.Append($"yield return \"{literal}\";\n");
                     break;
                 case TokenType.LeftCommentDelimiter:
                     codeMapper.AddNilGeneratingCode(token.Value);
@@ -180,8 +178,9 @@ internal class TemplateCodeGenerator
                         throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{code}'", []);
                     }
 
-                    AssureCodeIsExpression(code);
+                    int basePosition = codeMapper.GeneratedCodeLength;
                     codeMapper.AddUserProvidedCode(code);
+                    AssureCodeIsExpression(code, codeMapper, basePosition);
 
                     break;
                 case TokenType.ContentFormatDelimiter:
@@ -220,7 +219,7 @@ internal class TemplateCodeGenerator
         }
     }
 
-    private static void AssureCodeIsExpression(string code)
+    private static void AssureCodeIsExpression(string code, CodeMapper codeMapper, int startPosition)
     {
         // assure that content code is an expression
         ExpressionSyntax expressionSyntax = SyntaxFactory.ParseExpression(code);
@@ -232,7 +231,7 @@ internal class TemplateCodeGenerator
         {
             // TODO: add specific information about position and kind of the error
             throw new SyntaxErrorException("Content element does not contain an expression",
-                expressionSyntaxErrors.Select(e=>e.GetMessage()));
+                expressionSyntaxErrors.Select(e=>e.ToError(codeMapper, startPosition)));
         }
     }
 

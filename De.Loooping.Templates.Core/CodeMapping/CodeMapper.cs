@@ -34,27 +34,30 @@ internal class CodeMapper
         public required CodeType CodeType { get; init; }
     }
 
-    private class GeneratedCodeStartComparer : IComparer<CodeMapping>
+    private class GeneratedCodePositionComparer : IComparer<CodeMapping>
     {
         public int Compare(CodeMapping? x, CodeMapping? y)
         {
             if (ReferenceEquals(x, y)) return 0;
             if (ReferenceEquals(null, y)) return 1;
             if (ReferenceEquals(null, x)) return -1;
-            return x.GeneratedCodeStart.CompareTo(y.GeneratedCodeStart);
+
+            int codeStartComparison = x.GeneratedCodeStart.CompareTo(y.GeneratedCodeStart);
+            if (codeStartComparison != 0)
+                return codeStartComparison;
+            
+            int codeEndComparison = x.GeneratedCodeEnd.CompareTo(y.GeneratedCodeEnd);
+            return codeEndComparison;
         }
     }
 
     private StringBuilder _generatedCode = new();
     private StringBuilder _generatingCode = new();
-    
-    //private int _generatingCodeLength = 0;
-    private int _generatingCodeNewlines = 0;
-    //private int _generatedCodeLength = 0;
 
+    private int _generatingCodeNewlines = 0;
     private readonly SortedSet<Newline> _generatingCodeNewlinePositions = new(new NewlinePositionComparer());
     private readonly List<int> _generatedCodeNewlinePositions = new();
-    private readonly SortedSet<CodeMapping> _codeMapping = new(new GeneratedCodeStartComparer());
+    private readonly SortedSet<CodeMapping> _codeMapping = new(new GeneratedCodePositionComparer());
 
     private readonly Regex _newLineRegex = new Regex("\n", RegexOptions.Compiled);
 
@@ -135,15 +138,16 @@ internal class CodeMapper
     {
         AddNewlinePositionsForGeneratingCode(code);
         AddNewlinePositionsForGeneratedCode(code);
-        
-        _codeMapping.Add(new CodeMapping()
+
+        CodeMapping codeMapping = new CodeMapping()
         {
             GeneratedCodeStart = _generatedCode.Length,
             GeneratedCodeEnd = _generatedCode.Length + code.Length,
             GeneratingCodeStart = _generatingCode.Length,
             GeneratingCodeEnd = _generatingCode.Length + code.Length,
             CodeType = CodeType.UserProvided
-        });
+        };
+        _codeMapping.Add(codeMapping);
 
         _generatedCode.Append(code);
         _generatingCode.Append(code);
@@ -186,13 +190,18 @@ internal class CodeMapper
             AddUserProvidedCode(sb.ToString());
         }
     }
-    
+
     public CodePosition GetGeneratingCodePosition(CodePosition generatedCodePosition)
     {
-        CodeType codeType = CodeType.Unknown;
-            
         int rowStart = generatedCodePosition.Row > 0 ? _generatedCodeNewlinePositions[generatedCodePosition.Row - 1] + 1 : 0;
         int characterPositionInGeneratedCode = rowStart + generatedCodePosition.Column; // starts one char after the newline 
+
+        return GetGeneratingCodePosition(characterPositionInGeneratedCode);
+    }
+
+    public CodePosition GetGeneratingCodePosition(int characterPositionInGeneratedCode)
+    {
+        CodeType codeType = CodeType.Unknown;
 
         CodeMapping? mapping = null;
         while (codeType != CodeType.UserProvided) // find the last user provided code
@@ -203,7 +212,7 @@ internal class CodeMapper
                 throw new NullReferenceException($"{nameof(mapping)}");
             }
 
-            if (codeType == CodeType.EscapeSequence && mapping.CodeType != CodeType.UserProvided)
+            if (codeType == CodeType.EscapeSequence && mapping.CodeType != CodeType.UserProvided )
             {
                 // this would lead to an endless loop
                 throw new UnreachableException("This exception should never be thrown and indicates a bug. Please contact the library maintainer.");
@@ -251,17 +260,12 @@ internal class CodeMapper
         return lastNewline;
     }
 
-    private CodeType GetCodeType(CodeMapping mapping)
-    {
-        return mapping.CodeType;
-    }
-
     private CodeMapping? GetMapping(int characterPositionInGeneratedCode)
     {
         var mapping = _codeMapping.GetViewBetween(_codeMapping.Min, new CodeMapping()
         {
             GeneratedCodeStart = characterPositionInGeneratedCode,
-            GeneratedCodeEnd = 0,
+            GeneratedCodeEnd = Int32.MaxValue,
             GeneratingCodeStart = 0,
             GeneratingCodeEnd = 0,
             CodeType = CodeType.Unknown

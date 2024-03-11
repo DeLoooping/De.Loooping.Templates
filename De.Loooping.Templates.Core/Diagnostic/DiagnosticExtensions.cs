@@ -4,9 +4,10 @@ namespace De.Loooping.Templates.Core.Diagnostic;
 
 internal static class DiagnosticExtensions
 {
-    public static Error ToError(this Microsoft.CodeAnalysis.Diagnostic diagnostic, CodeMapper codeMapper)
+    public static Error ToError(this Microsoft.CodeAnalysis.Diagnostic diagnostic, CodeMapper codeMapper, int basePosition = 0)
     {
-        //var generatedCodePosition = diagnostic.Location.SourceSpan.
-        throw new NotImplementedException();
+        int generatedCodeCharPosition = diagnostic.Location.SourceSpan.End + basePosition;
+        CodePosition startPosition = codeMapper.GetGeneratingCodePosition(generatedCodeCharPosition);
+        return new Error(diagnostic.GetMessage(), startPosition);
     }
 }

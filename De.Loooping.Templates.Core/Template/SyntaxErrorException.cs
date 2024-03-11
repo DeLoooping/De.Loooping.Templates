@@ -4,9 +4,9 @@ namespace De.Loooping.Templates.Core.TemplateProcessors;
 
 public class SyntaxErrorException: Exception
 {
-    public IReadOnlyList<string> Errors { get; }
+    public IReadOnlyList<Error> Errors { get; }
 
-    public SyntaxErrorException(string message, IEnumerable<string> errors)
+    public SyntaxErrorException(string message, IEnumerable<Error> errors)
         :base(message)
     {
         Errors = errors.ToList();

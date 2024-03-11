@@ -4,9 +4,9 @@ namespace De.Loooping.Templates.Core.TemplateProcessors;
 
 public class CompilerErrorException: Exception
 {
-    public IReadOnlyList<string> Errors { get; }
+    public IReadOnlyList<Error> Errors { get; }
 
-    public CompilerErrorException(string message, IEnumerable<string> errors)
+    public CompilerErrorException(string message, IEnumerable<Error> errors)
         :base(message)
     {
         Errors = errors.ToList();

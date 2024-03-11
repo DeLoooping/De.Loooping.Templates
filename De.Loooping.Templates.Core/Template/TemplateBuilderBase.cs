@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text;
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Diagnostic;
@@ -117,11 +116,6 @@ public abstract class TemplateBuilderBase<TDelegate>
         }
     }
 
-    private string GetFullName(Type type)
-    {
-        return TypeNameResolver.GetFullName(type);
-    }
-    
     public TDelegate Build()
     {
         HashSet<Assembly> references = References.ToHashSet();
@@ -142,8 +136,8 @@ public abstract class TemplateBuilderBase<TDelegate>
         var syntaxErrors = syntaxDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         if (syntaxErrors.Any())
         {
-            // TODO: generate errors with location references to the original template
-            throw new SyntaxErrorException("One or more errors were found.", syntaxErrors.Select(e => e.GetMessage()));
+            var errors = syntaxErrors.Select(e => e.ToError(codeMapper));
+            throw new SyntaxErrorException("One or more errors were found.", errors);
         }
         
         // generate compilation
@@ -158,8 +152,8 @@ public abstract class TemplateBuilderBase<TDelegate>
         var compilerErrors = compilerDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         if (compilerErrors.Any())
         {
-            // TODO: generate errors with location references to the original template
-            throw new CompilerErrorException("One or more errors were found.", compilerErrors.Select(e => e.GetMessage()));
+            var errors = compilerErrors.Select(e => e.ToError(codeMapper));
+            throw new CompilerErrorException("One or more errors were found.", errors);
         }
         
         // generate assembly
@@ -171,9 +165,6 @@ public abstract class TemplateBuilderBase<TDelegate>
             {
                 // TODO: generate errors with location references to the original template
                 throw new CompilerErrorException("One or more errors were found.", []);
-                //int lineOffset = _codeTemplate.GetCodeLineOffset(code);
-                //return EvaluationResult.WithErrors(result.Diagnostics.Where(x => x.Severity == DiagnosticSeverity.Error).Select(x => GetDynamicScriptError(x, lineOffset)));
-                
             }
             var assemblyBytes = ms.ToArray();
             var assembly = Assembly.Load(assemblyBytes);

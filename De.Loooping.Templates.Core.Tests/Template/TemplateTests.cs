@@ -237,6 +237,7 @@ public class TemplateTests
 
     [Theory(DisplayName = $"Trying to escape the statement element fails with a {nameof(SyntaxErrorException)}")]
     [InlineData("{% yield return \"42\"; yield return Test(); }\n private static string Test() { return \"escaped\";\n %}")]
+    [InlineData("{% yield return \"42\"; yield return Test(); }\n static string Test() { return \"escaped\";\n %}")]
     public void CannotEscapeStatementElement(string content)
     {
         // setup
