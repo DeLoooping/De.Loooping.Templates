@@ -2,12 +2,12 @@ namespace De.Loooping.Templates.Core.Diagnostic;
 
 public class Error
 {
-    public Error(string message, CodePosition position)
+    public Error(string message, CodeLocation location)
     {
         Message = message;
-        Position = position;
+        Location = location;
     }
 
     public string Message { get; }
-    public CodePosition Position { get; }
+    public CodeLocation Location { get; }
 }

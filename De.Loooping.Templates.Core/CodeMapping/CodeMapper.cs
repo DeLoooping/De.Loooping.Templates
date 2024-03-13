@@ -7,6 +7,7 @@ namespace De.Loooping.Templates.Core.CodeMapping;
 
 internal class CodeMapper
 {
+    #region private classes
     private class Newline
     {
         public required int Index { get; init; }
@@ -23,43 +24,70 @@ internal class CodeMapper
             return x.CharPosition.CompareTo(y.CharPosition);
         }
     }
+
+    private class CodeSegment
+    {
+        public CodeSegment(int start, int end)
+        {
+            Start = start;
+            End = end;
+        }
+
+        /// <summary>
+        /// Segment is including this start character position
+        /// </summary>
+        public int Start { get; }
+        
+        /// <summary>
+        /// Segment is excluding this end character position
+        /// </summary>
+        public int End { get; }
+    }
     
     private class CodeMapping()
     {
-        public required int GeneratedCodeStart { get; init; }
-        public required int GeneratedCodeEnd { get; init; }
+        public required int Index { get; init; }
         
-        public required int GeneratingCodeStart { get; init; }
-        public required int GeneratingCodeEnd { get; init; }
-        public required CodeType CodeType { get; init; }
+        public CodeSegment? GeneratedCode { get; init; }
+        public CodeSegment? GeneratingCode { get; init; }
+        
+        public CodeMapping? PreviousGeneratedCodeMapping { get; init; }
+        public CodeMapping? PreviousGeneratingCodeMapping { get; init; }
     }
-
-    private class GeneratedCodePositionComparer : IComparer<CodeMapping>
-    {
-        public int Compare(CodeMapping? x, CodeMapping? y)
-        {
-            if (ReferenceEquals(x, y)) return 0;
-            if (ReferenceEquals(null, y)) return 1;
-            if (ReferenceEquals(null, x)) return -1;
-
-            int codeStartComparison = x.GeneratedCodeStart.CompareTo(y.GeneratedCodeStart);
-            if (codeStartComparison != 0)
-                return codeStartComparison;
-            
-            int codeEndComparison = x.GeneratedCodeEnd.CompareTo(y.GeneratedCodeEnd);
-            return codeEndComparison;
-        }
-    }
-
+    #endregion
+    
     private StringBuilder _generatedCode = new();
     private StringBuilder _generatingCode = new();
 
     private int _generatingCodeNewlines = 0;
     private readonly SortedSet<Newline> _generatingCodeNewlinePositions = new(new NewlinePositionComparer());
     private readonly List<int> _generatedCodeNewlinePositions = new();
-    private readonly SortedSet<CodeMapping> _codeMapping = new(new GeneratedCodePositionComparer());
+    
+    private readonly List<CodeMapping> _codeMapping = new();
 
     private readonly Regex _newLineRegex = new Regex("\n", RegexOptions.Compiled);
+
+    // TODO:
+    // Unescaping with Regex.Unescape might not match exactly with the output
+    // from SymbolDisplay.FormatLiteral (used in TemplateCodegenerator)
+    public static readonly EscapeSequenceMatcher BackslashEscapeSequenceMatcher = new EscapeSequenceMatcher(
+        new Regex(@"\G\\(x[0-9a-fA-F]{2}|[^x])", RegexOptions.Compiled),
+        match => Regex.Unescape(match.Value)); 
+    
+    public static readonly EscapeSequenceMatcher BracketEscapeSequenceMatcher = new EscapeSequenceMatcher(
+        new Regex(@"\G({{|}})", RegexOptions.Compiled),
+        match =>
+        {
+            switch (match.Value)
+            {
+                case "{{":
+                    return "{";
+                case "}}":
+                    return "}";
+                default:
+                    throw new ArgumentException(nameof(match));
+            }
+        });
 
     public string GeneratedCode => _generatedCode.ToString();
     public int GeneratedCodeLength => _generatedCode.Length;
@@ -67,6 +95,157 @@ internal class CodeMapper
     public string GeneratingCode => _generatingCode.ToString();
     public int GeneratingCodeLength => _generatingCode.Length;
     
+    /// <summary>
+    /// Adds code from user input that is not reflected in any generated code
+    /// </summary>
+    /// <param name="generatingCode"></param>
+    public void AddNilGeneratingCode(string generatingCode)
+    {
+        AddTranslatedCode(generatingCode, null);
+    }
+
+    /// <summary>
+    /// Adds code that is generated from no user input (boilerplate, etc.)
+    /// </summary>
+    /// <param name="generatedCode">The generated code.</param>
+    public void AddGeneratedCodeFromNil(string generatedCode)
+    {
+        AddTranslatedCode(null, generatedCode);
+    }
+
+    /// <summary>
+    /// Adds code where generating code is 1:1 the same as generated code 
+    /// </summary>
+    /// <param name="code">The code.</param>
+    public void AddUserProvidedCode(string code)
+    {
+        AddTranslatedCode(code, code);
+    }
+
+    /// <summary>
+    /// Adds code that is translated to some different code (escape sequences, etc.)
+    /// </summary>
+    /// <param name="generatingCode">The generating code.</param>
+    /// <param name="generatedCode">The generated code.</param>
+    public void AddTranslatedCode(string? generatingCode, string? generatedCode)
+    {
+        var generatedCodeSegment = ProcessCode(generatedCode, AddNewlinePositionsForGeneratedCode, _generatedCode);
+        var generatingCodeSegment = ProcessCode(generatingCode, AddNewlinePositionsForGeneratingCode, _generatingCode);
+
+        var lastMapping = _codeMapping.LastOrDefault();
+        
+        _codeMapping.Add(new CodeMapping()
+        {
+            Index = _codeMapping.Count,
+            
+            GeneratedCode = generatedCodeSegment,
+            GeneratingCode = generatingCodeSegment,
+            
+            PreviousGeneratedCodeMapping = lastMapping?.GeneratedCode == null ? lastMapping?.PreviousGeneratedCodeMapping : lastMapping,
+            PreviousGeneratingCodeMapping = lastMapping?.GeneratingCode == null ? lastMapping?.PreviousGeneratingCodeMapping : lastMapping,
+        });
+    }
+    
+    /// <summary>
+    /// Adds user input (generating code) that contains escape sequences. 
+    /// </summary>
+    /// <param name="generatedCode">The generated (already escaped) code.</param>
+    /// <param name="escapeSequenceMatcher">A Regex that identifies escape sequences. Regex group "escape" must contain the escape character(s) and group "escaped" must contain the escaped charcter(s).</param>
+    public void AddEscapedUserProvidedCode(string generatedCode, EscapeSequenceMatcher escapeSequenceMatcher)
+    {
+        StringBuilder sb = new();
+        for (int i = 0; i < generatedCode.Length; i++)
+        {
+            var match = escapeSequenceMatcher.Match(generatedCode, i);
+            if (match.Success)
+            {
+                if (sb.Length > 0)
+                {
+                    AddUserProvidedCode(sb.ToString());
+                    sb.Clear();
+                }
+                
+                string generatingSequence = match.UnescapedSequence!;
+                string generatedSequence = match.EscapedSequence!;
+                AddTranslatedCode(generatingSequence, generatedSequence);
+
+                i += match.EscapedSequence!.Length - 1; // skip complete escape sequence
+            }
+            else
+            {
+                sb.Append(generatedCode[i]);
+            }
+        }
+        
+        if (sb.Length > 0)
+        {
+            AddUserProvidedCode(sb.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Finds the nearest location in the original (generating) code that
+    /// corresponds to the supplied location from the generated code.
+    /// </summary>
+    /// <param name="generatedCodeLocation"></param>
+    /// <returns>The corresponding location inside the generating code.</returns>
+    public CodeLocation GetGeneratingCodeLocation(CodeLocation generatedCodeLocation)
+    {
+        int rowStart = generatedCodeLocation.Row > 0 ? _generatedCodeNewlinePositions[generatedCodeLocation.Row - 1] + 1 : 0;
+        int characterPositionInGeneratedCode = rowStart + generatedCodeLocation.Column; // starts one char after the newline 
+
+        return GetGeneratingCodeLocation(characterPositionInGeneratedCode);
+    }
+
+    /// <summary>
+    /// Finds the nearest location in the original (generating) code that
+    /// corresponds to the supplied location from the generated code.
+    /// </summary>
+    /// <param name="characterPositionInGeneratedCode">The number of characters, counted from the generated codes beginning.</param>
+    /// <returns>he corresponding location inside the generating code.</returns>
+    public CodeLocation GetGeneratingCodeLocation(int characterPositionInGeneratedCode)
+    {
+        var mapping = FindCodeMappingFromCharacterPositionInGeneratedCode(characterPositionInGeneratedCode);
+        if (mapping == null)
+        {
+            // no generating code before the given position
+            return new CodeLocation(0, 0);
+        }
+
+        if (mapping.GeneratedCode == null)
+        {
+            throw new UnreachableException("Shouldn't have happened");
+        }
+
+        int positionFromSegmentStart = characterPositionInGeneratedCode - mapping.GeneratedCode.Start;
+        
+        int characterPositionInGeneratingCode;
+        if (mapping.GeneratingCode != null)
+        {
+            characterPositionInGeneratingCode = Math.Min( // assure that the result position is still inside the segment
+                mapping.GeneratingCode.Start + positionFromSegmentStart, mapping.GeneratingCode.End - 1);
+        }
+        else
+        {
+            characterPositionInGeneratingCode = mapping.PreviousGeneratingCodeMapping?.GeneratingCode?.End - 1 ?? 0;
+        }
+        
+        return GetCodeLocationFromGeneratingCodeCharacterPosition(characterPositionInGeneratingCode);
+    }
+
+    private CodeSegment? ProcessCode(string? code, Action<string> addNewlinePositions, StringBuilder codeBuilder)
+    {
+        if (!String.IsNullOrEmpty(code))
+        {
+            addNewlinePositions(code);
+            var segment = new CodeSegment(codeBuilder.Length, codeBuilder.Length + code.Length);
+            codeBuilder.Append(code);
+            return segment;
+        }
+
+        return null;
+    }
+
     private void AddNewlinePositionsForGeneratingCode(string generatingCode)
     {
         foreach (Match match in _newLineRegex.Matches(generatingCode))
@@ -88,161 +267,49 @@ internal class CodeMapper
             _generatedCodeNewlinePositions.Add(match.Index + _generatedCode.Length);
         }
     }
-
-    /// <summary>
-    /// Adds code from user input that is not reflected in any generated code
-    /// </summary>
-    /// <param name="generatingCode"></param>
-    public void AddNilGeneratingCode(string generatingCode)
-    {
-        AddNewlinePositionsForGeneratingCode(generatingCode);
-
-        _codeMapping.Add(new CodeMapping()
-        {
-            GeneratedCodeStart = _generatedCode.Length,
-            GeneratedCodeEnd = _generatedCode.Length,
-            GeneratingCodeStart = _generatingCode.Length,
-            GeneratingCodeEnd = _generatingCode.Length + generatingCode.Length,
-            CodeType = CodeType.NilGenerating
-        });
-        
-        _generatingCode.Append(generatingCode);
-    }
-
-    /// <summary>
-    /// Adds code that is generated from no user input (boilerplate, etc.)
-    /// </summary>
-    /// <param name="generatedCode">The generated code.</param>
-    /// <param name="codeType">The code type.</param>
-    public void AddGeneratedCodeFromNil(string generatedCode, CodeType codeType = CodeType.FromNilGenerated)
-    {
-        AddNewlinePositionsForGeneratedCode(generatedCode);
-
-        _codeMapping.Add(new CodeMapping()
-        {
-            GeneratedCodeStart = _generatedCode.Length,
-            GeneratedCodeEnd = _generatedCode.Length + generatedCode.Length,
-            GeneratingCodeStart = _generatingCode.Length,
-            GeneratingCodeEnd = _generatingCode.Length,
-            CodeType = codeType
-        });
-
-        _generatedCode.Append(generatedCode);
-    }
-
-    /// <summary>
-    /// Adds code where generating code is 1:1 the same as generated code 
-    /// </summary>
-    /// <param name="code">The code.</param>
-    public void AddUserProvidedCode(string code)
-    {
-        AddNewlinePositionsForGeneratingCode(code);
-        AddNewlinePositionsForGeneratedCode(code);
-
-        CodeMapping codeMapping = new CodeMapping()
-        {
-            GeneratedCodeStart = _generatedCode.Length,
-            GeneratedCodeEnd = _generatedCode.Length + code.Length,
-            GeneratingCodeStart = _generatingCode.Length,
-            GeneratingCodeEnd = _generatingCode.Length + code.Length,
-            CodeType = CodeType.UserProvided
-        };
-        _codeMapping.Add(codeMapping);
-
-        _generatedCode.Append(code);
-        _generatingCode.Append(code);
-    }
     
-    /// <summary>
-    /// Adds user input (generating code) that contains escape sequences. 
-    /// </summary>
-    /// <param name="generatedCode">The generated (already escaped) code.</param>
-    /// <param name="escapeRegex">A Regex that identifies escape sequences. Regex group "escape" must contain the escape character(s) and group "escaped" must contain the escaped charcter(s).</param>
-    public void AddEscapedUserProvidedCode(string generatedCode, Regex escapeRegex)
+    private CodeMapping? FindCodeMappingFromCharacterPositionInGeneratedCode(int characterPositionInGeneratedCode)
     {
-        StringBuilder sb = new();
-        for (int i = 0; i < generatedCode.Length; i++)
-        {
-            var match = escapeRegex.Match(generatedCode, i);
-            if (match.Success)
-            {
-                if (sb.Length > 0)
-                {
-                    AddUserProvidedCode(sb.ToString());
-                    sb.Clear();
-                }
-                
-                string escapeString = match.Groups["escape"].Value;
-                AddGeneratedCodeFromNil(escapeString, CodeType.EscapeSequence);
-                i += match.Length - 1; // skip complete escape string
-                
-                string escapedString = match.Groups["escaped"].Value;
-                sb.Append(escapedString);
-            }
-            else
-            {
-                sb.Append(generatedCode[i]);
-            }
-        }
+        // do a binary search
+        int left = 0;
+        int right = _codeMapping.Count;
         
-        if (sb.Length > 0)
+        int mid;
+        while(true)
         {
-            AddUserProvidedCode(sb.ToString());
+            mid = (left + right) / 2;
+            CodeMapping? mapping = _codeMapping[mid];
+            mapping = mapping.GeneratedCode != null ? mapping : mapping.PreviousGeneratedCodeMapping;
+            if (mapping?.GeneratedCode == null)
+            {
+                // no code in generated code before the given character position
+                return null;
+            }
+
+            if (mapping.GeneratedCode.Start <= characterPositionInGeneratedCode && characterPositionInGeneratedCode < mapping.GeneratedCode.End)
+            {
+                return mapping;
+            }
+
+            if (characterPositionInGeneratedCode < mapping.GeneratedCode.Start)
+            {
+                right = mapping.Index; // optimization: Index can only be smaller than mid
+            }
+            else // mapping.GeneratedCode.End >= characterPositionInGeneratedCode
+            {
+                left = mid + 1;
+            }
         }
     }
 
-    public CodePosition GetGeneratingCodePosition(CodePosition generatedCodePosition)
+    private CodeLocation GetCodeLocationFromGeneratingCodeCharacterPosition(int characterPositionInGeneratingCode)
     {
-        int rowStart = generatedCodePosition.Row > 0 ? _generatedCodeNewlinePositions[generatedCodePosition.Row - 1] + 1 : 0;
-        int characterPositionInGeneratedCode = rowStart + generatedCodePosition.Column; // starts one char after the newline 
-
-        return GetGeneratingCodePosition(characterPositionInGeneratedCode);
-    }
-
-    public CodePosition GetGeneratingCodePosition(int characterPositionInGeneratedCode)
-    {
-        CodeType codeType = CodeType.Unknown;
-
-        CodeMapping? mapping = null;
-        while (codeType != CodeType.UserProvided) // find the last user provided code
-        {
-            mapping = GetMapping(characterPositionInGeneratedCode);
-            if (mapping == null)
-            {
-                throw new NullReferenceException($"{nameof(mapping)}");
-            }
-
-            if (codeType == CodeType.EscapeSequence && mapping.CodeType != CodeType.UserProvided )
-            {
-                // this would lead to an endless loop
-                throw new UnreachableException("This exception should never be thrown and indicates a bug. Please contact the library maintainer.");
-            }
-            
-            codeType = mapping.CodeType;
-            if (codeType == CodeType.EscapeSequence)
-            {
-                characterPositionInGeneratedCode = mapping.GeneratedCodeEnd; // next segment should be the escaped code
-            }
-            else if (codeType != CodeType.UserProvided)
-            {
-                characterPositionInGeneratedCode = mapping.GeneratedCodeStart - 1; // look up previous segment
-            }
-        }
-
-        if (mapping == null)
-        {
-            throw new NullReferenceException($"{nameof(mapping)}");
-        }
-
-        int characterOffsetFromMappingStart = characterPositionInGeneratedCode - mapping.GeneratedCodeStart;
-
-        int characterPositionInGeneratingCode = mapping.GeneratingCodeStart + characterOffsetFromMappingStart;
         var lastNewline = GetLastNewlineInGeneratingCodeBefore(characterPositionInGeneratingCode);
 
         int lastNewlineIndex = lastNewline != null ? lastNewline.Index + 1 : 0;
-        int column = characterPositionInGeneratingCode - (lastNewline?.CharPosition ?? 0);
+        int column = characterPositionInGeneratingCode - ((lastNewline?.CharPosition + 1) ?? 0);
 
-        return new CodePosition(lastNewlineIndex, column);
+        return new CodeLocation(lastNewlineIndex, column);
     }
 
     private Newline? GetLastNewlineInGeneratingCodeBefore(int characterPositionInGeneratingCode)
@@ -258,19 +325,5 @@ internal class CodeMapper
             Index = 0 // not needed for comparison
         }).Max;
         return lastNewline;
-    }
-
-    private CodeMapping? GetMapping(int characterPositionInGeneratedCode)
-    {
-        var mapping = _codeMapping.GetViewBetween(_codeMapping.Min, new CodeMapping()
-        {
-            GeneratedCodeStart = characterPositionInGeneratedCode,
-            GeneratedCodeEnd = Int32.MaxValue,
-            GeneratingCodeStart = 0,
-            GeneratingCodeEnd = 0,
-            CodeType = CodeType.Unknown
-        }).Max;
-
-        return mapping;
     }
 }

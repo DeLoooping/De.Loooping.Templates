@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Diagnostic;
 
@@ -16,11 +15,11 @@ public class CodeMapperTests
         mapper.AddGeneratedCodeFromNil("cc");
 
         // act
-        CodePosition originalPosition = mapper.GetGeneratingCodePosition(new CodePosition(0, 2));
+        CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(0, 2));
         
         // verify
-        Assert.Equal(0, originalPosition.Row);
-        Assert.Equal(0, originalPosition.Column);
+        Assert.Equal(0, originalLocation.Row);
+        Assert.Equal(0, originalLocation.Column);
     }
 
     [Fact(DisplayName = $"{nameof(CodeMapper)} returns correct position for multiline code")]
@@ -33,11 +32,11 @@ public class CodeMapperTests
         mapper.AddGeneratedCodeFromNil("cc");
 
         // act
-        CodePosition originalPosition = mapper.GetGeneratingCodePosition(new CodePosition(1, 1));
+        CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(1, 1));
         
         // verify
-        Assert.Equal(0, originalPosition.Row);
-        Assert.Equal(1, originalPosition.Column);
+        Assert.Equal(0, originalLocation.Row);
+        Assert.Equal(1, originalLocation.Column);
     }
     
     [Fact(DisplayName = $"{nameof(CodeMapper)} returns nearest position to the left of non-mappable internal code")]
@@ -50,11 +49,11 @@ public class CodeMapperTests
         mapper.AddGeneratedCodeFromNil("cc");
 
         // act
-        CodePosition originalPosition = mapper.GetGeneratingCodePosition(new CodePosition(2, 1));
+        CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(2, 1));
         
         // verify
-        Assert.Equal(0, originalPosition.Row);
-        Assert.Equal(2, originalPosition.Column);
+        Assert.Equal(0, originalLocation.Row);
+        Assert.Equal(2, originalLocation.Column);
     }
     
     [Fact(DisplayName = $"{nameof(CodeMapper)} returns correct position and code type for backslash escaped code")]
@@ -62,66 +61,52 @@ public class CodeMapperTests
     {
         // setup
         CodeMapper mapper = new CodeMapper();
-        Regex escapeRegex = new Regex(@"\G(?<escape>\\)(?<escaped>.)");
-        mapper.AddEscapedUserProvidedCode("ab\\\\c", escapeRegex);
+        mapper.AddEscapedUserProvidedCode("ab\\\\c", CodeMapper.BackslashEscapeSequenceMatcher);
 
         // act
-        CodePosition originalPosition = mapper.GetGeneratingCodePosition(new CodePosition(0, 4));
+        CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(0, 4));
         
         // verify
-        Assert.Equal(0, originalPosition.Row);
-        Assert.Equal(3, originalPosition.Column);
+        Assert.Equal(0, originalLocation.Row);
+        Assert.Equal(3, originalLocation.Column);
     }
     
-    [Fact(DisplayName = $"{nameof(CodeMapper)} returns correct position and code type for multiple escaped codes in sequence")]
-    public void CodeMapperReturnsCorrectPositionForMultipleBackSlashEscapedCodesInSequence()
+    [Theory(DisplayName = $"{nameof(CodeMapper)} returns correct position and code type for multiple escaped codes in sequence")]
+    [InlineData("""ab\\\\c""",0,6,0,4)]
+    [InlineData("""ab\\\\c""",0,5,0,3)]
+    [InlineData("""ab\\\\c""",0,4,0,3)]
+    [InlineData("""ab\\\\c""",0,3,0,2)]
+    public void CodeMapperReturnsCorrectPositionForMultipleBackSlashEscapedCodesInSequence(string content, int requestedRow, int requestedColumn,
+        int expectedRow, int expectedColumn)
     {
         // setup
         CodeMapper mapper = new CodeMapper();
-        Regex escapeRegex = new Regex(@"\G(?<escape>\\)(?<escaped>.)");
-        mapper.AddEscapedUserProvidedCode("""ab\\\\c""", escapeRegex);
+        mapper.AddEscapedUserProvidedCode(content, CodeMapper.BackslashEscapeSequenceMatcher);
 
         // act
-        CodePosition originalPosition1 = mapper.GetGeneratingCodePosition(new CodePosition(0, 6));
-        CodePosition originalPosition2 = mapper.GetGeneratingCodePosition(new CodePosition(0, 5));
-        CodePosition originalPosition3 = mapper.GetGeneratingCodePosition(new CodePosition(0, 4));
-        CodePosition originalPosition4 = mapper.GetGeneratingCodePosition(new CodePosition(0, 3));
+        CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(requestedRow, requestedColumn));
         
         // verify
-        Assert.Equal(0, originalPosition1.Row);
-        Assert.Equal(4, originalPosition1.Column);
-        
-        Assert.Equal(0, originalPosition2.Row);
-        Assert.Equal(3, originalPosition2.Column);
-        
-        Assert.Equal(0, originalPosition3.Row);
-        Assert.Equal(3, originalPosition3.Column);
-        
-        Assert.Equal(0, originalPosition4.Row);
-        Assert.Equal(2, originalPosition4.Column);
+        Assert.Equal(expectedRow, originalLocation.Row);
+        Assert.Equal(expectedColumn, originalLocation.Column);
     }
 
-    [Fact(DisplayName = $"{nameof(CodeMapper)} returns correct position and code type for bracket escaped code")]
-    public void CodeMapperReturnsCorrectPositionForBracketEscapedCode()
+    [Theory(DisplayName = $"{nameof(CodeMapper)} returns correct position and code type for bracket escaped code")]
+    [InlineData("ab{{c}}d", 0, 4, 0, 3)]
+    [InlineData("ab{{c}}d", 0, 3, 0, 2)]
+    [InlineData("ab{{c}}d", 0, 2, 0, 2)]
+    public void CodeMapperReturnsCorrectPositionForBracketEscapedCode(string content, int requestedRow, int requestedColumn,
+        int expectedRow, int expectedColumn)
     {
         // setup
         CodeMapper mapper = new CodeMapper();
-        Regex escapeRegex = new Regex(@"\G((?<escape>\{)(?<escaped>\{)|(?<escape>\})(?<escaped>\}))");
-        mapper.AddEscapedUserProvidedCode("ab{{c}}d", escapeRegex);
+        mapper.AddEscapedUserProvidedCode(content, CodeMapper.BracketEscapeSequenceMatcher);
 
         // act
-        CodePosition originalPosition1 = mapper.GetGeneratingCodePosition(new CodePosition(0, 4));
-        CodePosition originalPosition2 = mapper.GetGeneratingCodePosition(new CodePosition(0, 3));
-        CodePosition originalPosition3 = mapper.GetGeneratingCodePosition(new CodePosition(0, 2));
+        CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(requestedRow, requestedColumn));
         
         // verify
-        Assert.Equal(0, originalPosition1.Row);
-        Assert.Equal(3, originalPosition1.Column);
-        
-        Assert.Equal(0, originalPosition2.Row);
-        Assert.Equal(2, originalPosition2.Column);
-        
-        Assert.Equal(0, originalPosition3.Row);
-        Assert.Equal(2, originalPosition3.Column);
+        Assert.Equal(expectedRow, originalLocation.Row);
+        Assert.Equal(expectedColumn, originalLocation.Column);
     }
 }

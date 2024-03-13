@@ -13,13 +13,13 @@ namespace De.Loooping.Templates.Core.Template;
 internal class TemplateCodeGenerator
 {
     private const string _COMPILATION_ENUMERABLE_METHOD = "GetParts";
-
-    private readonly Regex _backslashEscaping = new Regex(@"\G(?<escape>\\)(?<escaped>.)", RegexOptions.Compiled);
-    private readonly Regex _bracketEscaping = new Regex(@"\G((?<escape>\{)(?<escaped>\{)|(?<escape>\})(?<escaped>\}))", RegexOptions.Compiled);
+    
+    private readonly Regex _whitespaceUntilEndRegex = new Regex(@"\G\s*$");
     
     private readonly string _namespaceName;
     private readonly string _className;
     private readonly string _methodName;
+    private readonly ParseOptions _parseOptions;
 
     private enum ContentState
     {
@@ -27,11 +27,12 @@ internal class TemplateCodeGenerator
         Format
     }
 
-    public TemplateCodeGenerator(string namespaceName, string className, string methodName)
+    public TemplateCodeGenerator(string namespaceName, string className, string methodName, ParseOptions parseOptions)
     {
         _namespaceName = namespaceName;
         _className = className;
         _methodName = methodName;
+        _parseOptions = parseOptions;
     }
     
     private string GetFullName(Type type)
@@ -83,21 +84,6 @@ internal class TemplateCodeGenerator
         return code;
     }
 
-    private static void AssureCodeIsOneStatementBlock(string code, CodeMapper codeMapper, int startPosition)
-    {
-        // assure that code cannot not escape the method body
-        var statementSyntax = SyntaxFactory.ParseStatement($"{{{code}}}");
-        var statementSyntaxDiagnostics = statementSyntax.GetDiagnostics();
-        var statementSyntaxErrors = statementSyntaxDiagnostics
-            .Where(d => d.Severity == DiagnosticSeverity.Error)
-            .ToList();
-        if (!(statementSyntax is BlockSyntax) || statementSyntax.Span != statementSyntax.FullSpan || statementSyntaxErrors.Any())
-        {
-            var errors = statementSyntaxErrors.Select(e=>e.ToError(codeMapper, startPosition));
-            throw new SyntaxErrorException("Code is not a statement block", errors);
-        }
-    }
-
     private void EvaluateRoot(IEnumerator<Token> tokenEnumerator, CodeMapper codeMapper)
     {
         while (tokenEnumerator.MoveNext())
@@ -108,7 +94,7 @@ internal class TemplateCodeGenerator
                 case TokenType.Literal:
                     string literal = SymbolDisplay.FormatLiteral(token.Value, false);
                     codeMapper.AddGeneratedCodeFromNil("yield return \"");
-                    codeMapper.AddEscapedUserProvidedCode(literal, _backslashEscaping);
+                    codeMapper.AddEscapedUserProvidedCode(literal, CodeMapper.BackslashEscapeSequenceMatcher);
                     codeMapper.AddGeneratedCodeFromNil("\";\n");
                     break;
                 case TokenType.LeftCommentDelimiter:
@@ -124,8 +110,7 @@ internal class TemplateCodeGenerator
                     EvaluateStatement(tokenEnumerator, codeMapper);
                     break;
                 default:
-                    // TODO: add specific information about position and kind of the error
-                    throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                    throw UnexpectedTokenException(token, codeMapper);
             }
         }
     }
@@ -146,8 +131,7 @@ internal class TemplateCodeGenerator
                     codeMapper.AddNilGeneratingCode(token.Value);
                     return;
                 default:
-                    // TODO: add specific information about position and kind of the error
-                    throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                    throw UnexpectedTokenException(token, codeMapper);
             }
         }
     }
@@ -167,15 +151,13 @@ internal class TemplateCodeGenerator
                 case TokenType.CSharp:
                     if (code != null || currentState != ContentState.Code)
                     {
-                        // TODO: add specific information about position and kind of the error
-                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                        throw UnexpectedTokenException(token, codeMapper);
                     }
                     
                     code = token.Value;
                     if (String.IsNullOrWhiteSpace(code))
                     {
-                        // TODO: add specific information about position and kind of the error
-                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{code}'", []);
+                        throw UnexpectedTokenException(token, codeMapper);
                     }
 
                     int basePosition = codeMapper.GeneratedCodeLength;
@@ -190,23 +172,21 @@ internal class TemplateCodeGenerator
                     codeMapper.AddGeneratedCodeFromNil(":");
                     break;
                 case TokenType.Literal:
-                    if (format != null || currentState != ContentState.Format || token.Value == null)
+                    if (format != null || currentState != ContentState.Format)
                     {
-                        // TODO: add specific information about position and kind of the error
-                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                        throw UnexpectedTokenException(token, codeMapper);
                     }
                     
                     format = token.Value
                         .Replace("{", "{{")
                         .Replace("}", "}}");
-                    codeMapper.AddEscapedUserProvidedCode(format, _bracketEscaping);
+                    codeMapper.AddEscapedUserProvidedCode(format, CodeMapper.BracketEscapeSequenceMatcher);
                     
                     break;
                 case TokenType.RightContentDelimiter:
                     if (String.IsNullOrEmpty(code))
                     {
-                        // TODO: add specific information about position and kind of the error
-                        throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                        throw UnexpectedTokenException(token, codeMapper);
                     }
                     
                     codeMapper.AddNilGeneratingCode(token.Value);
@@ -214,24 +194,8 @@ internal class TemplateCodeGenerator
                     
                     return;
                 default:
-                    throw new SyntaxErrorException("Unknown token", []); // TODO: add specific information about position and kind of the error
+                    throw UnexpectedTokenException(token, codeMapper);
             }
-        }
-    }
-
-    private static void AssureCodeIsExpression(string code, CodeMapper codeMapper, int startPosition)
-    {
-        // assure that content code is an expression
-        ExpressionSyntax expressionSyntax = SyntaxFactory.ParseExpression(code);
-        var expressionSyntaxDiagnostics = expressionSyntax.GetDiagnostics();
-        var expressionSyntaxErrors = expressionSyntaxDiagnostics
-            .Where(d => d.Severity == DiagnosticSeverity.Error)
-            .ToList();
-        if (expressionSyntaxErrors.Any())
-        {
-            // TODO: add specific information about position and kind of the error
-            throw new SyntaxErrorException("Content element does not contain an expression",
-                expressionSyntaxErrors.Select(e=>e.ToError(codeMapper, startPosition)));
         }
     }
 
@@ -250,9 +214,63 @@ internal class TemplateCodeGenerator
                     codeMapper.AddNilGeneratingCode(token.Value);
                     return;
                 default:
-                    // TODO: add specific information about position and kind of the error
-                    throw new SyntaxErrorException($"Unexpected token {token.TokenType} with value '{token.Value}'", []);
+                    throw UnexpectedTokenException(token, codeMapper);
             }
+        }
+    }
+    
+    private static SyntaxErrorException UnexpectedTokenException(Token token, CodeMapper codeMapper)
+    {
+        return new SyntaxErrorException("Unexpected token", [
+            new Error($"Unexpected token {token.TokenType} with value '{token.Value}'", codeMapper.GetGeneratingCodeLocation(codeMapper.GeneratedCodeLength))
+        ]);
+    }
+    
+    private static void AssureCodeIsExpression(string code, CodeMapper codeMapper, int startPosition)
+    {
+        // assure that content code is an expression
+        ExpressionSyntax expressionSyntax = SyntaxFactory.ParseExpression(code);
+        var expressionSyntaxDiagnostics = expressionSyntax.GetDiagnostics();
+        var expressionSyntaxErrors = expressionSyntaxDiagnostics
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToList();
+        if (expressionSyntaxErrors.Any())
+        {
+            throw new SyntaxErrorException("Content element does not contain an expression",
+                expressionSyntaxErrors.Select(e=>e.ToError(codeMapper, startPosition)));
+        }
+    }
+
+    private void AssureCodeIsOneStatementBlock(string code, CodeMapper codeMapper, int startPosition)
+    {
+        // assure that code cannot not escape the method body
+
+        int offset = 0;
+        while (offset < code.Length)
+        {
+            if (_whitespaceUntilEndRegex.IsMatch(code, offset))
+            {
+                // end of code
+                return;
+            }
+            
+            var statementSyntax = SyntaxFactory.ParseStatement(code, offset, _parseOptions, false);
+            var statementSyntaxDiagnostics = statementSyntax.GetDiagnostics();
+            var statementSyntaxErrors = statementSyntaxDiagnostics
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .ToList();
+            
+            if (statementSyntax == null || statementSyntaxErrors.Any())
+            {
+                var errors = statementSyntaxErrors.Select(e =>
+                {
+                    int realStartPosition = startPosition + offset; // respect previous code
+                    return e.ToError(codeMapper, realStartPosition);
+                });
+                throw new SyntaxErrorException("Code is not a statement block", errors);
+            }
+
+            offset += statementSyntax.FullSpan.Length;
         }
     }
 }
