@@ -1,3 +1,4 @@
+using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template;
 using De.Loooping.Templates.Core.TemplateProcessors;
@@ -337,5 +338,19 @@ public class TemplateTests
         
         // verify
         Assert.Equal(content, result);
+    }
+
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} and {nameof(CodeMapper)} build correct generating code from literal with special characters")]
+    public void TemplateBuilderAndCodeMapperBuildCorrectGeneratingCodeFromLiteralsWithSpecialCharacters()
+    {
+        // setup
+        string content = "start\n\t\b\0\xA01end";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        
+        // act
+        templateBuilder.Build();
+        
+        // verify
+        Assert.Equal(content, templateBuilder.CodeMapper?.GeneratingCode);
     }
 }

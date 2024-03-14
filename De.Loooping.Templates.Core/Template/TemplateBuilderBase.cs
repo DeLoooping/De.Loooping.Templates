@@ -47,6 +47,8 @@ public abstract class TemplateBuilderBase<TDelegate>
     public HashSet<string> Usings { get; } = new();
     public HashSet<Assembly> References { get; } = new();
 
+    internal CodeMapper? CodeMapper { get; private set; } = null;
+
     public void AddType(Type type)
     {
         References.Add(type.Assembly);
@@ -128,6 +130,7 @@ public abstract class TemplateBuilderBase<TDelegate>
         
         // generate code
         var templateCode = GenerateTemplateCode(usings, out CodeMapper codeMapper);
+        CodeMapper = codeMapper;
 
         // generate syntax tree
         var syntaxTree = CSharpSyntaxTree.ParseText(templateCode, _parseOptions);
@@ -178,14 +181,13 @@ public abstract class TemplateBuilderBase<TDelegate>
         }
     }
 
-    private string GenerateTemplateCode(HashSet<string> usings, out CodeMapper codeMapping)
+    private string GenerateTemplateCode(HashSet<string> usings, out CodeMapper codeMapper)
     {
-        
         Tokenizer tokenizer = new Tokenizer(_configuration, _parseOptions);
         List<Token> tokens = tokenizer.Tokenize(_template);
 
         TemplateCodeGenerator templateCodeGenerator = new(_COMPILATION_NAMESPACE, _COMPILATION_CLASS, _COMPILATION_METHOD, _parseOptions);
-        string templateCode = templateCodeGenerator.Generate(tokens, Parameters, usings, out codeMapping);
+        string templateCode = templateCodeGenerator.Generate(tokens, Parameters, usings, out codeMapper);
 
         return templateCode;
     }
