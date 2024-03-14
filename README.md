@@ -11,6 +11,7 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 - Easy syntax, inspired by Jinja2
 - Full support of C# code inside the template
 - Built-in value formatting via [.NET format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types)
+- Error tracking, so exceptions return the error location inside your template
 
 
 ## Basic template syntax
@@ -19,10 +20,10 @@ A template consists of different elements that are used in turns to produce the 
 These elements are:
 
 
-### Content placeholders
+### Content blocks
 Syntax: `{{ here.comes.an.expression }}`
 
-Content placeholders begin with the opening delimiter `{{` and end with the closing delimiter `}}`. Between these two delimiters must be a [C# expression](https://learn.microsoft.com/de-de/dotnet/csharp/language-reference/language-specification/expressions), i.e. a value or some code that represents a value.
+Content blocks begin with the opening delimiter `{{` and end with the closing delimiter `}}`. Between these two delimiters must be a [C# expression](https://learn.microsoft.com/de-de/dotnet/csharp/language-reference/language-specification/expressions), i.e. a value or some code that represents a value.
 
 Examples:
 - Strings: `"abc"`
@@ -30,7 +31,7 @@ Examples:
 - Complex objects: `new DateTime()`
 - Code that results in some value: `DateTime.Parse("2024-03-07 21:25")`
 
-Values in content placeholders can be formatted by adding a `:` after the expression, followed by a [format string](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types).
+Values in content blocks can be formatted by adding a `:` after the expression, followed by a [format string](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types).
 
 Examples:
 - `{{ 12.34 :000.000}}` results in the output `012.340`
@@ -39,16 +40,16 @@ Examples:
 Expression and format string can stretch over several lines, but the format string must not end with any whitespace.
 
 
-### Statement placeholders
+### Statement blocks
 Syntax: `{% here.comes.a.statement(); or.maybe = more.than.one; %}`
 
-Statement placeholders can contain any C# code that is allowed inside a method body. You can use it for example to create loops.
+Statement blocks can contain any C# code that is allowed inside a method body. You can use it for example to create loops.
 
 Example:
 `{%  for(int i=0; i<=3; i++) {  %}{{ i }}{%  }  %}` results in `0123`  
 The first statement block contains the for loop and the opening `{`.  
 The content block in the middle `{{ i }}` just outputs the current value of `i`.
-The statement block at the end finishes the loop block with a closing `}`.
+The statement block at the end finishes the loop with a closing `}`.
 
 In case you need to output some values from inside a statement block, this is also possible by using `yield return`, but the returned value must be a string.
 
@@ -64,15 +65,15 @@ results in `ab`.
 As you can see in the last example, it's also allowed to stretch statement placeholders over multiple lines.
 
 
-### Comments
+### Comment blocks
 Syntax: `{# this is a comment #}`
 
-The content of comments is ignored in the output, so you can use them to add descriptions or explanations to your template.
+The content of comment blocks is ignored in the output, so you can use them to add descriptions or explanations to your template.
 
 
 ### Literals
 
-Literals have no special Syntax or delimiters. Everything that is not a content placeholder, statement placeholder or comment is a literal.  
+Literals have no special Syntax or delimiters. Everything that is not a content, statement or comment block is a literal.  
 Literals will be added to the output as-is, so usually the biggest part of a template consists of literals.
 
 Example:
@@ -109,15 +110,15 @@ public void Main()
 
 ## Changing delimiters
 
-In seldom cases you might need to output special character sequences that interfere with the templating engines default delimiters (i.e. `{{`, `}}`, `{%`, `%}`, ...).
+In seldom cases you might need to output special character sequences that interfere with the templating engines default delimiters (i.e. `{{`, `}}`, `{%`, `%}`, `{#`, `#}`).
 
-One solution to this is to output your needed output from inside a content or statement placeholder:
+One solution to this is to return your needed output from a content or statement placeholder:
 - `{{ "{{ lalala }}" }}` will output `{{ lalala }}`
 - `{% yield return "{% lalala %}"; %}` will output `{% lalala %}`
 
 but this looks nasty and is very inconvenient.
 
-Another solution for this is to overwrite the default delimiters with something you don't need to output from your template:
+Another solution is to overwrite the default delimiters with something you don't need to output from your template:
 ```C#
 public void Main()
 {
@@ -150,7 +151,3 @@ public void Main()
 
 `TemplateBuilder.WithType<T>()` adds the required assembly reference to the template and also adds the types namespace as a `using` directive.
 You can also use `TemplateBuilder.WithReference(Assembly reference)` and/or `TemplateBuilder.WithUsing(String @using)` to add these separately.
-
-
-## Still to do
-- Add meaningful expception messages in case of syntax or compile-time errors
