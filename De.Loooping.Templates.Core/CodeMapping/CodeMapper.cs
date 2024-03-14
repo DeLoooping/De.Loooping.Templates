@@ -5,7 +5,7 @@ using De.Loooping.Templates.Core.Diagnostic;
 
 namespace De.Loooping.Templates.Core.CodeMapping;
 
-internal class CodeMapper
+public class CodeMapper
 {
     #region private classes
     private class Newline
@@ -70,11 +70,11 @@ internal class CodeMapper
     // TODO:
     // Unescaping with Regex.Unescape might not match exactly with the output
     // from SymbolDisplay.FormatLiteral (used in TemplateCodegenerator)
-    public static readonly EscapeSequenceMatcher BackslashEscapeSequenceMatcher = new EscapeSequenceMatcher(
+    internal static readonly EscapeSequenceMatcher BackslashEscapeSequenceMatcher = new EscapeSequenceMatcher(
         new Regex(@"\G\\(x[0-9a-fA-F]{2}|[^x])", RegexOptions.Compiled),
         match => Regex.Unescape(match.Value)); 
     
-    public static readonly EscapeSequenceMatcher BracketEscapeSequenceMatcher = new EscapeSequenceMatcher(
+    internal static readonly EscapeSequenceMatcher BracketEscapeSequenceMatcher = new EscapeSequenceMatcher(
         new Regex(@"\G({{|}})", RegexOptions.Compiled),
         match =>
         {
@@ -89,17 +89,17 @@ internal class CodeMapper
             }
         });
 
-    public string GeneratedCode => _generatedCode.ToString();
-    public int GeneratedCodeLength => _generatedCode.Length;
+    internal string GeneratedCode => _generatedCode.ToString();
+    internal int GeneratedCodeLength => _generatedCode.Length;
     
-    public string GeneratingCode => _generatingCode.ToString();
-    public int GeneratingCodeLength => _generatingCode.Length;
+    internal string GeneratingCode => _generatingCode.ToString();
+    internal int GeneratingCodeLength => _generatingCode.Length;
     
     /// <summary>
     /// Adds code from user input that is not reflected in any generated code
     /// </summary>
     /// <param name="generatingCode"></param>
-    public void AddNilGeneratingCode(string generatingCode)
+    internal void AddNilGeneratingCode(string generatingCode)
     {
         AddTranslatedCode(generatingCode, null);
     }
@@ -108,7 +108,7 @@ internal class CodeMapper
     /// Adds code that is generated from no user input (boilerplate, etc.)
     /// </summary>
     /// <param name="generatedCode">The generated code.</param>
-    public void AddGeneratedCodeFromNil(string generatedCode)
+    internal void AddGeneratedCodeFromNil(string generatedCode)
     {
         AddTranslatedCode(null, generatedCode);
     }
@@ -117,7 +117,7 @@ internal class CodeMapper
     /// Adds code where generating code is 1:1 the same as generated code 
     /// </summary>
     /// <param name="code">The code.</param>
-    public void AddUserProvidedCode(string code)
+    internal void AddUserProvidedCode(string code)
     {
         AddTranslatedCode(code, code);
     }
@@ -127,7 +127,7 @@ internal class CodeMapper
     /// </summary>
     /// <param name="generatingCode">The generating code.</param>
     /// <param name="generatedCode">The generated code.</param>
-    public void AddTranslatedCode(string? generatingCode, string? generatedCode)
+    internal void AddTranslatedCode(string? generatingCode, string? generatedCode)
     {
         var generatedCodeSegment = ProcessCode(generatedCode, AddNewlinePositionsForGeneratedCode, _generatedCode);
         var generatingCodeSegment = ProcessCode(generatingCode, AddNewlinePositionsForGeneratingCode, _generatingCode);
@@ -151,7 +151,7 @@ internal class CodeMapper
     /// </summary>
     /// <param name="generatedCode">The generated (already escaped) code.</param>
     /// <param name="escapeSequenceMatcher">A Regex that identifies escape sequences. Regex group "escape" must contain the escape character(s) and group "escaped" must contain the escaped charcter(s).</param>
-    public void AddEscapedUserProvidedCode(string generatedCode, EscapeSequenceMatcher escapeSequenceMatcher)
+    internal void AddEscapedUserProvidedCode(string generatedCode, EscapeSequenceMatcher escapeSequenceMatcher)
     {
         StringBuilder sb = new();
         for (int i = 0; i < generatedCode.Length; i++)
@@ -212,7 +212,7 @@ internal class CodeMapper
         if (mapping == null)
         {
             // no generating code before the given position
-            return new CodeLocation(0, 0);
+            return new CodeLocation(1, 1);
         }
 
         if (mapping.GeneratedCode == null)
@@ -281,6 +281,13 @@ internal class CodeMapper
         while(true)
         {
             mid = (left + right) / 2;
+            if (mid >= _codeMapping.Count)
+            {
+                // return the last available mapping
+                var codeMapping = _codeMapping[^1];
+                return codeMapping.GeneratedCode != null ? codeMapping : codeMapping.PreviousGeneratedCodeMapping;
+            }
+            
             CodeMapping? mapping = _codeMapping[mid];
             mapping = mapping.GeneratedCode != null ? mapping : mapping.PreviousGeneratedCodeMapping;
             if (mapping?.GeneratedCode == null)

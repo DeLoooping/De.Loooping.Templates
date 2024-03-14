@@ -5,17 +5,12 @@ namespace De.Loooping.Templates.Core.Diagnostic;
 /// </summary>
 public class CodeLocation: IEquatable<CodeLocation>
 {
-    internal static CodeLocation Create(int row, int column)
-    {
-        return new CodeLocation(row, column);
-    }
-    
     /// <summary>
     /// Constructs a CodeLocation
     /// </summary>
     /// <param name="line">One-based row inside the code</param>
     /// <param name="column">One-based column inside the code</param>
-    internal CodeLocation(int line, int column)
+    public CodeLocation(int line, int column)
     {
         Line = line;
         Column = column;
@@ -49,5 +44,10 @@ public class CodeLocation: IEquatable<CodeLocation>
     public override int GetHashCode()
     {
         return HashCode.Combine(Line, Column);
+    }
+
+    public override string ToString()
+    {
+        return $"(line: {Line}, column: {Column})";
     }
 }

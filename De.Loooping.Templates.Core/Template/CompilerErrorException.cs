@@ -1,6 +1,6 @@
 using De.Loooping.Templates.Core.Diagnostic;
 
-namespace De.Loooping.Templates.Core.TemplateProcessors;
+namespace De.Loooping.Templates.Core.Template;
 
 public class CompilerErrorException: Exception
 {

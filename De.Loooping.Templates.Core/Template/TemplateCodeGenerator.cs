@@ -1,7 +1,6 @@
 using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Diagnostic;
-using De.Loooping.Templates.Core.TemplateProcessors;
 using De.Loooping.Templates.Core.Tokenizers;
 using De.Loooping.Templates.Core.Tools;
 using Microsoft.CodeAnalysis;
@@ -12,7 +11,8 @@ namespace De.Loooping.Templates.Core.Template;
 
 internal class TemplateCodeGenerator
 {
-    private const string _COMPILATION_ENUMERABLE_METHOD = "GetParts";
+    private const string _COMPILATION_TEMPLATE_CLASS_NAME = "Template";
+    private const string _COMPILATION_TEMPLATE_ENUMERABLE_METHOD_NAME = "Evaluate";
     
     private readonly Regex _whitespaceUntilEndRegex = new Regex(@"\G\s*$");
     
@@ -61,21 +61,52 @@ internal class TemplateCodeGenerator
             codeMapper.AddGeneratedCodeFromNil($"using {u};\n");
         }
 
-        codeMapper.AddGeneratedCodeFromNil($"namespace {_namespaceName};\n\n");
-        codeMapper.AddGeneratedCodeFromNil($"public class {_className} {{\n");
+        codeMapper.AddGeneratedCodeFromNil($$"""
+                                             namespace {{_namespaceName}};
 
-        codeMapper.AddGeneratedCodeFromNil($"public static string {_methodName}({String.Join(", ", parametersWithType)})\n{{\n");
-        codeMapper.AddGeneratedCodeFromNil($"   var result = {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parameterNames)});\n");
-        codeMapper.AddGeneratedCodeFromNil($"   return String.Concat(result);\n");
-        codeMapper.AddGeneratedCodeFromNil("}\n\n");
-        
-        codeMapper.AddGeneratedCodeFromNil($"private static {GetFullName(typeof(IEnumerable<string>))} {_COMPILATION_ENUMERABLE_METHOD}({String.Join(", ", parametersWithType)})\n{{\n");
+                                             public class {{_className}}
+                                             {
+                                             	{{GetFullName(typeof(CodeMapper))}} _codeMapper;
+                                             
+                                             	{{GetFullName(typeof(Regex))}} _lineFinderRegex = new {{GetFullName(typeof(Regex))}}("at {{_namespaceName}}.{{_COMPILATION_TEMPLATE_CLASS_NAME}}.{{_COMPILATION_TEMPLATE_ENUMERABLE_METHOD_NAME}}\\(.*?:line (?<line>\\d+)", {{GetFullName(typeof(RegexOptions))}}.{{nameof(RegexOptions.Compiled)}});
+                                             
+                                             	public {{_className}}({{GetFullName(typeof(CodeMapper))}} codeMapper)
+                                             	{
+                                             		_codeMapper = codeMapper;
+                                             	}
+                                             
+                                             	public string {{_methodName}}({{String.Join(", ", parametersWithType)}})
+                                             	{
+                                             		try {
+                                             			var result = {{_COMPILATION_TEMPLATE_CLASS_NAME}}.{{_COMPILATION_TEMPLATE_ENUMERABLE_METHOD_NAME}}({{String.Join(", ", parameterNames)}});
+                                             			return String.Concat(result);
+                                             		}
+                                             		catch (Exception e)
+                                             		{
+                                             			var lineMatch = _lineFinderRegex.Match(e.StackTrace);
+                                             			int line = lineMatch.Success ? Int32.Parse(lineMatch.Groups["line"].Value) : 1;
+                                             			var location = _codeMapper.{{nameof(CodeMapper.GetGeneratingCodeLocation)}}(new {{GetFullName(typeof(CodeLocation))}}(line,1));
+                                             			throw new {{GetFullName(typeof(RuntimeErrorException))}}($"A runtime error occured: {e.Message}", location, e);
+                                             		}
+                                             	}
+                                             }
 
+                                             internal static class {{_COMPILATION_TEMPLATE_CLASS_NAME}}
+                                             {
+                                             	public static {{GetFullName(typeof(IEnumerable<string>))}} {{_COMPILATION_TEMPLATE_ENUMERABLE_METHOD_NAME}}({{String.Join(", ", parametersWithType)}})
+                                             	{
+                                             
+                                             """);
+
+        // translate template code
         int bodyStart = codeMapper.GeneratedCodeLength;
         EvaluateRoot(enumerator, codeMapper);
         int bodyEnd = codeMapper.GeneratedCodeLength;
         
-        codeMapper.AddGeneratedCodeFromNil("}\n}");
+        codeMapper.AddGeneratedCodeFromNil($$"""
+                                             	}
+                                             }
+                                             """);
         
         string code = codeMapper.GeneratedCode;
         string body = code.Substring(bodyStart, bodyEnd - bodyStart);
@@ -125,7 +156,6 @@ internal class TemplateCodeGenerator
                 case TokenType.CSharp:
                     string code = token.Value;
                     codeMapper.AddUserProvidedCode(code);
-                    //codeBuilder.Append(code);
                     break;
                 case TokenType.RightStatementDelimiter:
                     codeMapper.AddNilGeneratingCode(token.Value);
@@ -207,7 +237,6 @@ internal class TemplateCodeGenerator
             switch (token.TokenType)
             {
                 case TokenType.Literal:
-                    // do nothing
                     codeMapper.AddNilGeneratingCode(token.Value);
                     break;
                 case TokenType.RightCommentDelimiter:
@@ -222,7 +251,8 @@ internal class TemplateCodeGenerator
     private static SyntaxErrorException UnexpectedTokenException(Token token, CodeMapper codeMapper)
     {
         return new SyntaxErrorException("Unexpected token", [
-            new Error($"Unexpected token {token.TokenType} with value '{token.Value}'", codeMapper.GetGeneratingCodeLocation(codeMapper.GeneratedCodeLength))
+            new Error($"Unexpected token {token.TokenType} with value '{token.Value}'",
+                codeMapper.GetGeneratingCodeLocation(codeMapper.GeneratedCodeLength))
         ]);
     }
     

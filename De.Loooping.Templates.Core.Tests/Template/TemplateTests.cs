@@ -1,7 +1,6 @@
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template;
-using De.Loooping.Templates.Core.TemplateProcessors;
 using De.Loooping.Templates.Core.Tests.Tools;
 using Xunit.Abstractions;
 
@@ -238,9 +237,9 @@ public class TemplateTests
         });
     }
     
-    public class CannotEscapeStatementElementData: TestData<(string content, (int row, int column)[] errorPositions, bool allowAdditionalErrors)>
+    public class CannotEscapeStatementElementData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
     {
-        protected override IEnumerable<(string content, (int row, int column)[] errorPositions, bool allowAdditionalErrors)> GetData()
+        protected override IEnumerable<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)> GetData()
         {
             yield return (
                 "{% yield return \"42\"; yield return Test(); }\n private static string Test() { return \"escaped\";\n %}",
@@ -262,7 +261,7 @@ public class TemplateTests
 
     [Theory(DisplayName = $"Trying to escape the statement element fails with a {nameof(SyntaxErrorException)}")]
     [ClassData(typeof(CannotEscapeStatementElementData))]
-    public void CannotEscapeStatementElement(string content, (int row, int column)[] errorPositions, bool allowAdditionalErrors)
+    public void CannotEscapeStatementElement(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)
     {
         // setup
         TemplateBuilder templateBuilder = new TemplateBuilder(content)
@@ -278,19 +277,19 @@ public class TemplateTests
             Assert.NotEqual("42escaped", result);
         });
 
-        var expectedErrorPositions = errorPositions.Select(e => new CodeLocation(e.row, e.column)).ToList().ToHashSet();
-        var actualErrorPositions = exception.Errors.Select(e => e.Location).ToHashSet();
+        var expectedErrorLocations = errorLocations.Select(e => new CodeLocation(e.row, e.column)).ToList().ToHashSet();
+        var actualErrorLocations = exception.Errors.Select(e => e.Location).ToHashSet();
         
-        Assert.Superset(expectedErrorPositions, actualErrorPositions);
+        Assert.Superset(expectedErrorLocations, actualErrorLocations);
         if (!allowAdditionalErrors)
         {
-            Assert.Subset(expectedErrorPositions, actualErrorPositions);
+            Assert.Subset(expectedErrorLocations, actualErrorLocations);
         }
     }
     
-    public class CompilerErrorsAreAtTheRightPositionData: TestData<(string content, (int row, int column)[] errorPositions, bool allowAdditionalErrors)>
+    public class CompilerErrorsAreAtTheRightLocationData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
     {
-        protected override IEnumerable<(string content, (int row, int column)[] errorPositions, bool allowAdditionalErrors)> GetData()
+        protected override IEnumerable<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)> GetData()
         {
             yield return (
                 "{# a comment #}\n{%\nyield return \"a\";\nyield return \"b\";return \"c\";\n%}",
@@ -300,9 +299,9 @@ public class TemplateTests
         }
     }
 
-    [Theory(DisplayName = $"Compiler errors are at the right position")]
-    [ClassData(typeof(CompilerErrorsAreAtTheRightPositionData))]
-    public void CompilerErrorsAreAtTheRightPosition(string content, (int row, int column)[] errorPositions, bool allowAdditionalErrors)
+    [Theory(DisplayName = $"Compiler errors are at the right location")]
+    [ClassData(typeof(CompilerErrorsAreAtTheRightLocationData))]
+    public void CompilerErrorsAreAtTheRightLocation(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)
     {
         // setup
         TemplateBuilder templateBuilder = new TemplateBuilder(content)
@@ -315,13 +314,13 @@ public class TemplateTests
             templateBuilder.Build();
         });
 
-        var expectedErrorPositions = errorPositions.Select(e => new CodeLocation(e.row, e.column)).ToList().ToHashSet();
-        var actualErrorPositions = exception.Errors.Select(e => e.Location).ToHashSet();
+        var expectedErrorLocations = errorLocations.Select(e => new CodeLocation(e.row, e.column)).ToList().ToHashSet();
+        var actualErrorLocations = exception.Errors.Select(e => e.Location).ToHashSet();
         
-        Assert.Superset(expectedErrorPositions, actualErrorPositions);
+        Assert.Superset(expectedErrorLocations, actualErrorLocations);
         if (!allowAdditionalErrors)
         {
-            Assert.Subset(expectedErrorPositions, actualErrorPositions);
+            Assert.Subset(expectedErrorLocations, actualErrorLocations);
         }
     }
 
@@ -352,5 +351,38 @@ public class TemplateTests
         
         // verify
         Assert.Equal(content, templateBuilder.CodeMapper?.GeneratingCode);
+    }
+    
+    public class RuntimeErrorsAreAtTheRightLocationData: TestData<(string content, int line, int column, Type? innerException)>
+    {
+        protected override IEnumerable<(string content, int line, int column, Type? innerException)> GetData()
+        {
+            yield return (
+                "{%\nthrow new NotImplementedException(\"Test\");\n%}",
+                2, 1,
+                typeof(NotImplementedException)
+            );
+            yield return (
+                "Start\n{{ 42/(new List<int>().Count) }}\nEnd",
+                2, 2, // TODO: This case is a bit strange. Shouldn't it be (2,3)?  
+                typeof(DivideByZeroException)
+            );
+        }
+    }
+
+    [Theory(DisplayName = $"{nameof(TemplateBuilder)} throws {nameof(RuntimeErrorException)} and returns correct error location")]
+    [ClassData(typeof(RuntimeErrorsAreAtTheRightLocationData))]
+    public void RuntimeErrorsAreAtTheRightLocation(string content, int line, int column, Type? innerException)
+    {
+        // setup
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+
+        // act and validate
+        var exception = Assert.Throws<RuntimeErrorException>(() => template());
+        
+        Assert.Equal(line, exception.Location.Line);        
+        Assert.Equal(column, exception.Location.Column);        
+        Assert.Equal(innerException, exception.InnerException?.GetType());        
     }
 }
