@@ -243,17 +243,17 @@ public class TemplateTests
         {
             yield return (
                 "{% yield return \"42\"; yield return Test(); }\n private static string Test() { return \"escaped\";\n %}",
-                [(0, 43)],
+                [(1, 44)],
                 true
             );
             yield return (
                 "{% yield return \"42\"; yield return Test(); }\n static string Test() { return \"escaped\";\n %}",
-                [(0, 43)],
+                [(1, 44)],
                 true
             );
             yield return (
                 "{% yield return \"42\"; }\n string Test => { return \"escaped\";\n %}",
-                [(0, 22)],
+                [(1, 23)],
                 true
             );
         }
@@ -293,7 +293,7 @@ public class TemplateTests
         {
             yield return (
                 "{# a comment #}\n{%\nyield return \"a\";\nyield return \"b\";return \"c\";\n%}",
-                [(3, 23)],
+                [(4, 24)],
                 true
             );
         }

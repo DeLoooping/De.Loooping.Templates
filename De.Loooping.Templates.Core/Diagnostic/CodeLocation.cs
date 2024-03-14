@@ -5,7 +5,7 @@ namespace De.Loooping.Templates.Core.Diagnostic;
 /// </summary>
 public class CodeLocation: IEquatable<CodeLocation>
 {
-    public static CodeLocation Create(int row, int column)
+    internal static CodeLocation Create(int row, int column)
     {
         return new CodeLocation(row, column);
     }
@@ -13,21 +13,21 @@ public class CodeLocation: IEquatable<CodeLocation>
     /// <summary>
     /// Constructs a CodeLocation
     /// </summary>
-    /// <param name="row">Zero-based row inside the code</param>
-    /// <param name="column">Zero-based column inside the code</param>
-    public CodeLocation(int row, int column)
+    /// <param name="line">One-based row inside the code</param>
+    /// <param name="column">One-based column inside the code</param>
+    internal CodeLocation(int line, int column)
     {
-        Row = row;
+        Line = line;
         Column = column;
     }
 
     /// <summary>
-    /// Zero-based row inside the code
+    /// One-based line number inside the code
     /// </summary>
-    public int Row { get; }
+    public int Line { get; }
     
     /// <summary>
-    /// Zero-based column inside the code
+    /// One-based column inside the code
     /// </summary>
     public int Column { get; }
 
@@ -35,7 +35,7 @@ public class CodeLocation: IEquatable<CodeLocation>
     {
         if (ReferenceEquals(null, other)) return false;
         if (ReferenceEquals(this, other)) return true;
-        return Row == other.Row && Column == other.Column;
+        return Line == other.Line && Column == other.Column;
     }
 
     public override bool Equals(object? obj)
@@ -48,6 +48,6 @@ public class CodeLocation: IEquatable<CodeLocation>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Row, Column);
+        return HashCode.Combine(Line, Column);
     }
 }

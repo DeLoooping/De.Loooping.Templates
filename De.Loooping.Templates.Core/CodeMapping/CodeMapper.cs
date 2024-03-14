@@ -191,8 +191,11 @@ internal class CodeMapper
     /// <returns>The corresponding location inside the generating code.</returns>
     public CodeLocation GetGeneratingCodeLocation(CodeLocation generatedCodeLocation)
     {
-        int rowStart = generatedCodeLocation.Row > 0 ? _generatedCodeNewlinePositions[generatedCodeLocation.Row - 1] + 1 : 0;
-        int characterPositionInGeneratedCode = rowStart + generatedCodeLocation.Column; // starts one char after the newline 
+        int zeroBasedline = generatedCodeLocation.Line - 1;
+        int zeroBasedColumn = generatedCodeLocation.Column - 1;
+        
+        int lineStart = zeroBasedline > 0 ? _generatedCodeNewlinePositions[zeroBasedline - 1] + 1 : 0;
+        int characterPositionInGeneratedCode = lineStart + zeroBasedColumn; // starts one char after the newline 
 
         return GetGeneratingCodeLocation(characterPositionInGeneratedCode);
     }
@@ -308,8 +311,10 @@ internal class CodeMapper
 
         int lastNewlineIndex = lastNewline != null ? lastNewline.Index + 1 : 0;
         int column = characterPositionInGeneratingCode - ((lastNewline?.CharPosition + 1) ?? 0);
-
-        return new CodeLocation(lastNewlineIndex, column);
+        
+        int oneBasedLine = lastNewlineIndex + 1;
+        int oneBasedColumn = column + 1;
+        return new CodeLocation(oneBasedLine, oneBasedColumn);
     }
 
     private Newline? GetLastNewlineInGeneratingCodeBefore(int characterPositionInGeneratingCode)
