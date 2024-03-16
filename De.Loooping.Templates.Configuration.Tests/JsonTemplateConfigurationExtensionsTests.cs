@@ -8,10 +8,10 @@ public class JsonTemplateConfigurationExtensionsTests
 {
     class TestConfigurationSection
     {
-        public int A { get; set; }
-        public List<int> B { get; set; }
-        public string C { get; set; }
-        public List<string> D { get; set; }
+        public required int A { get; set; }
+        public required List<int> B { get; set; }
+        public required string C { get; set; }
+        public required List<string> D { get; set; }
     }
     
     [Fact(DisplayName = "Basic json template configuration returns expected values")]
@@ -34,10 +34,10 @@ public class JsonTemplateConfigurationExtensionsTests
 
     public class TestData
     {
-        public int Int { get; set; }
-        public List<int> IntList { get; set; }
-        public string String { get; set; }
-        public List<string> StringList { get; set; }
+        public required int Int { get; set; }
+        public required List<int> IntList { get; set; }
+        public required string String { get; set; }
+        public required List<string> StringList { get; set; }
     }
 
     delegate string TestDataDelegate(TestData input);
