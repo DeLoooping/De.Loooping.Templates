@@ -1,5 +1,9 @@
 #!/bin/sh
 
 # set new version for De.Loooping.Templates.Core
-dotnet dotnet gitversion "./De.Loooping.Templates.Core" /updateprojectfiles
+dotnet gitversion "./De.Loooping.Templates.Core" /updateprojectfiles
 git stage ./De.Loooping.Templates.Core/De.Loooping.Templates.Core.csproj
+
+# set new version for De.Loooping.Templates.Configuration
+dotnet gitversion "./De.Loooping.Templates.Configuration" /updateprojectfiles
+git stage ./De.Loooping.Templates.Configuration/De.Loooping.Templates.Configuration.csproj
