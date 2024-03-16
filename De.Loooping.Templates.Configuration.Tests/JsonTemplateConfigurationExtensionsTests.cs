@@ -55,10 +55,10 @@ public class JsonTemplateConfigurationExtensionsTests
         
         ConfigurationManager configuration = new ConfigurationManager();
         configuration.AddJsonTemplateFile<TestDataDelegate>("Resources/JsonTemplateConfigurationWithInjectedData.json",
-            (d)=>d(testData),
+            (d) => d(testData),
             build: builder =>
             {
-                builder.WithType(typeof(List<>));
+                builder.AddType(typeof(List<>));
             });
 
         var serviceProvider = new ServiceCollection()

@@ -14,6 +14,10 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 - Error tracking, so exceptions return the error location inside your template
 
 
+## Installation
+- Add NuGet package `De.Loooping.Templates.Core.XXX.nupkg` to your project, where XXX is the version number (e.g. "0.4.0")
+- If you want to use the configuration extensions, also add `De.Loooping.Templates.Configuration.XXX.nupkg`.
+
 ## Basic template syntax
 
 A template consists of different elements that are used in turns to produce the intended output.  
@@ -82,7 +86,7 @@ Example:
 
 ## Working with templates in your code
 
-Building and using a template from a string is as easy as this:  
+Building and using a template from a string is as easy as this:
 ```C#
 public void Main()
 {
@@ -94,7 +98,7 @@ public void Main()
 }
 ```
 
-Most of the time you will want to pass some data to your template. For this, you have to define a delegate with result type `string` and use it as a type argument when creating the `TemplateBuilder`:  
+Most of the time you will want to pass some data to your template. For this, you have to define a delegate with result type `string` and use it as a type argument when creating the `TemplateBuilder`:
 ```C#
 private delegate string MyTemplate(int a, string b);
 
@@ -136,7 +140,7 @@ public void Main()
 
 ### Adding custom types
 
-The TemplateBuilder will only add references and [`using` directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-directive) for the most basic types like `int` and `string`, as well as references of all types provided in the delegate type argument (`TDelegate` in `new TemplateBuilder<TDelegate>()`). If you want to use or declare other types (like a generic `List<T>` for example), you have to add them to the `TemplateBuilder` before building the template or it will throw an exception:  
+The TemplateBuilder will only add references and [`using` directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/using-directive) for the most basic types like `int` and `string`, as well as references of all types provided in the delegate type argument (`TDelegate` in `new TemplateBuilder<TDelegate>()`). If you want to use or declare other types (like a generic `List<T>` for example), you have to add them to the `TemplateBuilder` before building the template or it will throw an exception:
 ```C#
 public void Main()
 {
@@ -151,3 +155,67 @@ public void Main()
 
 `TemplateBuilder.WithType<T>()` adds the required assembly reference to the template and also adds the types namespace as a `using` directive.
 You can also use `TemplateBuilder.WithReference(Assembly reference)` and/or `TemplateBuilder.WithUsing(String @using)` to add these separately.
+
+
+### Configuration extensions
+
+The configuration extensions allow you to add templating to your JSON configurations. To use these, you have to add NuGet package `De.Loooping.Templates.Configuration.XXX.nupkg`.
+
+By default, block delimiters are embedded into block comments (i.e. /* and */) inside the JSON document, so that colissions with Intellisense are kept to a minimum.
+
+Example appsettings.template.json:
+```
+{
+  "AnInteger": /*{{ 21*2 }}*/,
+  "AListOfStrings": [/*{%
+    for(int i=0; i<3; i++)
+    {
+      if (i != 0) yield return ",";
+      yield return $"\"item_{i}\"";
+    }
+  %}*/]
+}
+```
+will evaluate as
+```
+{
+  "AnInteger": 42,
+  "AListOfStrings": ["item_0","item_1","item_2"]
+}
+```
+
+Add the template file to dependency injection:
+```C#
+public void Configure(ConfigurationManager configuration)
+{
+  configuration.AddJsonTemplateFile("appsettings.template.json");
+}
+```
+
+If you need to add types, references or usings on the `TemplateBuilder`:
+```C#
+public void Configure(ConfigurationManager configuration)
+{
+  configuration.AddJsonTemplateFile("appsettings.template.json",
+    build: builder =>
+    {
+        builder.AddType(typeof(List<>));
+        builder.AddReference(typeof(IDictionary<,>).Assembly);
+        builder.AddUsing("Custom.Namespace");
+    });
+}
+```
+
+If you need to inject any data into the template:
+```C#
+private delegate string MyTemplate(string myString);
+...
+public void Configure(ConfigurationManager configuration)
+{
+  configuration.AddJsonTemplateFile<MyTemplate>("appsettings.template.json",
+    (inject) => inject("This will be injected as variable myString into the template")
+  );
+}
+```
+
+
