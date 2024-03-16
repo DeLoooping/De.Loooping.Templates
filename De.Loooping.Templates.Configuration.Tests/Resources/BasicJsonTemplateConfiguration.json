@@ -1,0 +1,12 @@
+{
+  "TestSection": {
+    "A": "/*{{ 2*21 }}*/",
+    "B": [/*{{ String.Join(",", ((int[])[1, 2, 3]).Select(i => i.ToString())) }}*/],
+    "C": /*{{ "\"lala\"" }}*/,
+    "D": [/*{%
+          for (int i=0; i<3; i++) {
+      yield return (i != 0 ? "," : String.Empty);
+      yield return $"\"{i:000}\"";
+         } %}*/]
+  }
+}

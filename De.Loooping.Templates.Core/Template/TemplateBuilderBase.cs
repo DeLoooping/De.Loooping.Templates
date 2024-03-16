@@ -13,8 +13,6 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace De.Loooping.Templates.Core.Template;
 
-public delegate string Process();
-
 public abstract class TemplateBuilderBase<TDelegate>
     where TDelegate: class, MulticastDelegate
 {
@@ -35,6 +33,11 @@ public abstract class TemplateBuilderBase<TDelegate>
     {
         AddType(typeof(T));
     }
+
+    public void AddType(Type type)
+    {
+        AddType(type, References, Usings);
+    }
     
     public void AddUsing(string @using)
     {
@@ -43,9 +46,57 @@ public abstract class TemplateBuilderBase<TDelegate>
 
     public void AddReference(Assembly reference)
     {
-        References.Add(reference);
+        AddReference(reference, References);
     }
     #endregion
+
+    private void AddType(Type type, HashSet<Assembly> references, HashSet<string> usings)
+    {
+        var assembly = type.Assembly;
+        AddReference(assembly, references);
+        AddForwardingAssemblyReferences(type, references);
+        
+        if (type.Namespace != null)
+        {
+            usings.Add(type.Namespace);
+        }
+    }
+
+    private void AddForwardingAssemblyReferences(Type forwardedType, HashSet<Assembly> references)
+    {
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.GetForwardedTypes().Contains(forwardedType));
+
+        foreach (var assembly in assemblies)
+        {
+            AddReference(assembly, references);
+        }
+    }
+
+    private void AddReference(Assembly reference, HashSet<Assembly> references)
+    {
+        if (!references.Contains(reference))
+        {
+            references.Add(reference);
+
+            foreach (var assemblyName in reference.GetReferencedAssemblies())
+            {
+                AddReference(assemblyName, references);
+            }
+        }
+    }
+
+    private void AddReference(AssemblyName assemblyName, HashSet<Assembly> references)
+    {
+        // assumption: the assembly is already loaded
+        var assembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().FullName == assemblyName.FullName);
+
+        if(assembly != null)
+        {
+            AddReference(assembly);
+        }
+    }
 
     private IEnumerable<KeyValuePair<string, Type>> Parameters => _parameters.Value;
     
@@ -63,15 +114,6 @@ public abstract class TemplateBuilderBase<TDelegate>
             return _codeMapper;
         }
         private set => _codeMapper = value;
-    }
-
-    public void AddType(Type type)
-    {
-        References.Add(type.Assembly);
-        if (type.Namespace != null)
-        {
-            Usings.Add(type.Namespace);
-        }
     }
 
     internal TemplateBuilderBase(string template, TemplateProcessorConfiguration? configuration = null)
@@ -95,36 +137,43 @@ public abstract class TemplateBuilderBase<TDelegate>
         _parameters = new Lazy<List<KeyValuePair<string, Type>>>(() => GetParameters().ToList());
     }
 
-    private void AddDefaultReferences(HashSet<Assembly> references)
+    private void AddDefaults(HashSet<Assembly> references, HashSet<string> usings)
     {
-        references.Add(typeof(int).Assembly);
-        references.Add(typeof(Enumerable).Assembly);
-        references.Add(typeof(Object).Assembly);
-        references.Add(typeof(IEnumerable<>).Assembly);
-        references.Add(typeof(Regex).Assembly);
-        
-        references.Add(typeof(RuntimeErrorException).Assembly);
-        references.Add(typeof(CodeLocation).Assembly);
-        
-        references.Add(AppDomain.CurrentDomain.GetAssemblies().First(a=>a.GetName().Name == "System.Runtime"));
-    }
+        var types = (Type[])
+        [
+            typeof(int),
+            typeof(Enumerable),
+            typeof(IEnumerable<>),
+            typeof(Object),
+            typeof(Regex),
 
-    private void AddParameterTypeReferences(HashSet<Assembly> references)
-    {
-        foreach (var kvp in Parameters)
+            typeof(RuntimeErrorException),
+            typeof(CodeLocation),
+            typeof(CodeMapper)
+        ];
+        
+        foreach (Type type in types)
         {
-            Type type = kvp.Value;
-            references.Add(type.Assembly);
+            AddReference(type.Assembly, references);
+            AddForwardingAssemblyReferences(type, references);
         }
-    }
-
-    private void AddDefaultUsings(HashSet<string> usings)
-    {
+        
+        AddReference(AppDomain.CurrentDomain.GetAssemblies().First(a=>a.GetName().Name == "System.Runtime"), references);
+        
         usings.Add("System");
         usings.Add("System.Linq");
         usings.Add("System.Collections.Generic");
     }
-    
+
+    private void AddParameterTypeReferences(HashSet<Assembly> references, HashSet<string> usings)
+    {
+        foreach (var kvp in Parameters)
+        {
+            Type type = kvp.Value;
+            AddType(type, references, usings);
+        }
+    }
+
     private IEnumerable<KeyValuePair<string, Type>> GetParameters()
     {
         int index = 0;
@@ -142,11 +191,9 @@ public abstract class TemplateBuilderBase<TDelegate>
     public TDelegate Build()
     {
         HashSet<Assembly> references = References.ToHashSet();
-        AddDefaultReferences(references);
-        AddParameterTypeReferences(references);
-
         HashSet<string> usings = Usings.ToHashSet();
-        AddDefaultUsings(usings);
+        AddDefaults(references, usings);
+        AddParameterTypeReferences(references, usings);
         
         // generate code
         var templateCode = GenerateTemplateCode(usings, out CodeMapper codeMapper);
@@ -215,7 +262,7 @@ public abstract class TemplateBuilderBase<TDelegate>
             var assemblyBytes = assemblyStream.ToArray();
             var assembly = Assembly.Load(assemblyBytes);
             
-            // return template
+            // extract template method from created assembly
             var callerClassType = assembly.GetType($"{_COMPILATION_NAMESPACE}.{_CALLER_CLASS}")!;
             var callerClassConstructor = callerClassType.GetConstructor([typeof(CodeMapper)])!;
             var callerObject = callerClassConstructor.Invoke([codeMapper]);
@@ -223,6 +270,7 @@ public abstract class TemplateBuilderBase<TDelegate>
             var callerMethodType = callerClassType.GetMethod(_CALLER_METHOD)!;
             var d = CreateDelegate(callerMethodType, callerObject);
             
+            // return template method
             return (TDelegate)d;
         }
     }

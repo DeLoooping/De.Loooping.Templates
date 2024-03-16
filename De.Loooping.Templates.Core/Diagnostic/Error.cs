@@ -10,4 +10,9 @@ public class Error
 
     public string Message { get; }
     public CodeLocation Location { get; }
+
+    public override string ToString()
+    {
+        return $"@({Location.Line}, {Location.Column}) {Message}";
+    }
 }

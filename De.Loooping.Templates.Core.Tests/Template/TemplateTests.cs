@@ -325,7 +325,10 @@ public class TemplateTests
     }
 
     [Theory(DisplayName = "Literals with special characters are correctly returned in the output")]
-    [InlineData("start\n\b\t\x0A\x00\nend")]
+    [InlineData("start\n\b\t\x0A\x00\n\\end")]
+    [InlineData("start\"\n\b\t\x0A\x00\n\\end")]
+    [InlineData("start\n\r\u0085\u2028\u2029end")]
+    [InlineData("start\U0001F600\u1F60\xE7\x0E7\x00E7end")]
     public void LiteralsWithSpecialCharactersWork(string content)
     {
         // setup

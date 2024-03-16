@@ -123,10 +123,29 @@ internal class TemplateCodeGenerator
             switch (token.TokenType)
             {
                 case TokenType.Literal:
-                    string literal = SymbolDisplay.FormatLiteral(token.Value, false);
-                    codeMapper.AddGeneratedCodeFromNil("yield return \"");
-                    codeMapper.AddEscapedUserProvidedCode(literal, CodeMapper.BackslashEscapeSequenceMatcher);
-                    codeMapper.AddGeneratedCodeFromNil("\";\n");
+                    string literal = SymbolDisplay.FormatLiteral(token.Value, true); // can return string literal ("") or verbatim string (@"")
+                    bool isVerbatimString = literal.Substring(0, 2) == "@\"";
+                    
+                    string quotePrefix;
+                    EscapeSequenceMatcher escapeSequenceMatcher;
+                    if (isVerbatimString)
+                    {
+                        // verbatim string
+                        literal = literal.Substring(2, literal.Length - 3); // remove verbatim quotes @"..."
+                        quotePrefix = "@\"";
+                        escapeSequenceMatcher = CodeMapper.VerbatimStringEscapeSequenceMatcher;
+                    }
+                    else
+                    {
+                        // string literal
+                        literal = literal.Substring(1, literal.Length - 2); // remove quotes "..."
+                        quotePrefix = "\"";
+                        escapeSequenceMatcher = CodeMapper.StringLiteralEscapeSequenceMatcher;
+                    }
+                    
+                    codeMapper.AddGeneratedCodeFromNil($"yield return {quotePrefix}");
+                    codeMapper.AddEscapedUserProvidedCode(literal, escapeSequenceMatcher);
+                    codeMapper.AddGeneratedCodeFromNil("\";\n"); // suffix is the same for verbatim string and string literal
                     break;
                 case TokenType.LeftCommentDelimiter:
                     codeMapper.AddNilGeneratingCode(token.Value);

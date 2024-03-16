@@ -1,0 +1,12 @@
+{
+  "TestSection": {
+    "A": "/*{{ input.Int }}*/",
+    "B": [/*{{ String.Join(",", input.IntList.Select(i => i.ToString())) }}*/],
+    "C": /*{{ $"\"{input.String}\"" }}*/,
+    "D": [/*{%
+          for (int i=0; i<input.StringList.Count; i++) {
+      yield return (i != 0 ? "," : String.Empty);
+      yield return $"\"{input.StringList[i]}\"";
+         } %}*/]
+  }
+}

@@ -12,4 +12,8 @@ public class SyntaxErrorException: Exception
         Errors = errors.ToList();
     }
 
+    public override string ToString()
+    {
+        return $"M:{Message}\n{String.Join("\n", Errors)}\n{base.ToString()}";
+    }
 }

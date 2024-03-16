@@ -67,11 +67,15 @@ public class CodeMapper
 
     private readonly Regex _newLineRegex = new Regex("\n", RegexOptions.Compiled);
 
+    internal static readonly EscapeSequenceMatcher VerbatimStringEscapeSequenceMatcher = new EscapeSequenceMatcher(
+        new Regex("\\G\"\"", RegexOptions.Compiled),
+        match => "\""); 
+    
     // TODO:
     // Unescaping with Regex.Unescape might not match exactly with the output
     // from SymbolDisplay.FormatLiteral (used in TemplateCodegenerator)
-    internal static readonly EscapeSequenceMatcher BackslashEscapeSequenceMatcher = new EscapeSequenceMatcher(
-        new Regex(@"\G\\(x[0-9a-fA-F]{2}|[^x])", RegexOptions.Compiled),
+    internal static readonly EscapeSequenceMatcher StringLiteralEscapeSequenceMatcher = new EscapeSequenceMatcher(
+        new Regex(@"\G\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[^xu])", RegexOptions.Compiled),
         match => Regex.Unescape(match.Value)); 
     
     internal static readonly EscapeSequenceMatcher BracketEscapeSequenceMatcher = new EscapeSequenceMatcher(

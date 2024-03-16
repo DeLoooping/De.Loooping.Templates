@@ -3,7 +3,7 @@ using De.Loooping.Templates.Core.Configuration;
 
 namespace De.Loooping.Templates.Core.Template;
 
-public sealed class TemplateBuilder<TDelegate> : TemplateBuilderBase<TDelegate>, IFluentTemplateBuilder<TemplateBuilder<TDelegate>>
+public sealed class TemplateBuilder<TDelegate> : TemplateBuilderBase<TDelegate>, IFluentTemplateBuilder<TemplateBuilder<TDelegate>>, IFluentTemplateBuilder, ITemplateBuilder
     where TDelegate : class, MulticastDelegate
 {
     public TemplateBuilder(string template, TemplateProcessorConfiguration? configuration = null)
@@ -11,6 +11,8 @@ public sealed class TemplateBuilder<TDelegate> : TemplateBuilderBase<TDelegate>,
     {
     }
 
+    #region IFluentTemplateBuilder<TemplateBuilder<TDelegate>>
+    
     public TemplateBuilder<TDelegate> WithType<T>()
     {
         AddType<T>();
@@ -34,14 +36,42 @@ public sealed class TemplateBuilder<TDelegate> : TemplateBuilderBase<TDelegate>,
         AddReference(reference);
         return this;
     }
+
+    #endregion
+
+    #region IFluentTemplateBuilder
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithType(Type type)
+    {
+        return WithType(type);
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithUsing(string @using)
+    {
+        return WithUsing(@using);
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithReference(Assembly reference)
+    {
+        return WithReference(reference);
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithType<T>()
+    {
+        return WithType<T>();
+    }
+
+    #endregion
 }
 
-public sealed class TemplateBuilder : TemplateBuilderBase<Process>, IFluentTemplateBuilder<TemplateBuilder>
+public sealed class TemplateBuilder : TemplateBuilderBase<Process>, IFluentTemplateBuilder<TemplateBuilder>, IFluentTemplateBuilder
 {
     public TemplateBuilder(string template, TemplateProcessorConfiguration? configuration = null)
         : base(template, configuration)
     {
     }
+
+    #region IFluentTemplateBuilder<TemplateBuilder>
 
     public TemplateBuilder WithType<T>()
     {
@@ -66,4 +96,30 @@ public sealed class TemplateBuilder : TemplateBuilderBase<Process>, IFluentTempl
         AddReference(reference);
         return this;
     }
+    
+    #endregion
+    
+    #region IFluentTemplateBuilder
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithType(Type type)
+    {
+        return WithType(type);
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithUsing(string @using)
+    {
+        return WithUsing(@using);
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithReference(Assembly reference)
+    {
+        return WithReference(reference);
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithType<T>()
+    {
+        return WithType<T>();
+    }
+
+    #endregion
 }

@@ -61,7 +61,7 @@ public class CodeMapperTests
     {
         // setup
         CodeMapper mapper = new CodeMapper();
-        mapper.AddEscapedUserProvidedCode("ab\\\\c", CodeMapper.BackslashEscapeSequenceMatcher);
+        mapper.AddEscapedUserProvidedCode("ab\\\\c", CodeMapper.StringLiteralEscapeSequenceMatcher);
 
         // act
         CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(1, 5));
@@ -81,7 +81,7 @@ public class CodeMapperTests
     {
         // setup
         CodeMapper mapper = new CodeMapper();
-        mapper.AddEscapedUserProvidedCode(content, CodeMapper.BackslashEscapeSequenceMatcher);
+        mapper.AddEscapedUserProvidedCode(content, CodeMapper.StringLiteralEscapeSequenceMatcher);
 
         // act
         CodeLocation originalLocation = mapper.GetGeneratingCodeLocation(new CodeLocation(requestedRow, requestedColumn));
