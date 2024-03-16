@@ -60,6 +60,14 @@ public abstract class TemplateBuilderBase<TDelegate>
         {
             usings.Add(type.Namespace);
         }
+
+        if (type.IsGenericType)
+        {
+            foreach (Type typeArgument in type.GenericTypeArguments)
+            {
+                AddType(typeArgument, references, usings);
+            }
+        }
     }
 
     private void AddForwardingAssemblyReferences(Type forwardedType, HashSet<Assembly> references)

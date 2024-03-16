@@ -388,4 +388,24 @@ public class TemplateTests
         Assert.Equal(column, exception.Location.Column);        
         Assert.Equal(innerException, exception.InnerException?.GetType());        
     }
+
+
+    public class SomeType
+    {
+        public int Value => 42;
+    }
+
+    private delegate string GenericTypeTest(List<SomeType> things);
+
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} also adds generic type parameters to references")]
+    public void TemplateBuilderAlsoAddsGenericTypeParametersOnAddType()
+    {
+        string content = "{{ String.Concat(things.Select(t => t.Value)) }}";
+        var templateBuilder = new TemplateBuilder<GenericTypeTest>(content);
+        var template = templateBuilder.Build();
+
+        // act and validate
+        var result = template([new SomeType(), new SomeType()]);
+        Assert.Equal("4242", result);
+    }
 }
