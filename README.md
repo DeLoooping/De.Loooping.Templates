@@ -192,7 +192,7 @@ public void Configure(ConfigurationManager configuration)
 }
 ```
 
-If you need to add types, references or usings on the `TemplateBuilder`:
+If you need to add types, references or usings to the `TemplateBuilder`:
 ```C#
 public void Configure(ConfigurationManager configuration)
 {
@@ -217,5 +217,3 @@ public void Configure(ConfigurationManager configuration)
   );
 }
 ```
-
-
