@@ -11,4 +11,12 @@ public class RuntimeErrorException: Exception
     {
         Location = location;
     }
+
+    public override string? StackTrace
+    {
+        get
+        {
+            return $"in template on line {Location.Line}, column {Location.Column}\n{base.StackTrace}";
+        }
+    }
 }

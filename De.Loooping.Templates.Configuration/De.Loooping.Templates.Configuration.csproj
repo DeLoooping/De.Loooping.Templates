@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.4.0-alpha0001</Version>
+    <Version>0.4.0-alpha0002</Version>
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
     <FileVersion>0.4.0.0</FileVersion>
-    <InformationalVersion>0.4.0-alpha.1+Branch.develop.Sha.81f781c1d6b4abb489c274f3195b01e4e487326c</InformationalVersion>
+    <InformationalVersion>0.4.0-alpha.2+Branch.develop.Sha.cff24c8b10f2e60a1517b3cc7adddfbbbb5498fb</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />

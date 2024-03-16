@@ -1,3 +1,4 @@
+using System.Text;
 using De.Loooping.Templates.Core.Diagnostic;
 
 namespace De.Loooping.Templates.Core.Template;
@@ -12,8 +13,18 @@ public class SyntaxErrorException: Exception
         Errors = errors.ToList();
     }
 
-    public override string ToString()
+    public override string Message
     {
-        return $"M:{Message}\n{String.Join("\n", Errors)}\n{base.ToString()}";
+        get
+        {
+            StringBuilder sb = new();
+            sb.AppendLine(base.Message);
+            foreach (Error error in Errors)
+            {
+                sb.AppendLine($"- Error (line: {error.Location.Line}, column: {error.Location.Column}): {error.Message}");
+            }
+
+            return sb.ToString();
+        }
     }
 }
