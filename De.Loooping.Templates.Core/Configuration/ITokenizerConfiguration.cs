@@ -11,4 +11,9 @@ public interface ITokenizerConfiguration
 
     string LeftCommentDelimiter { get; }
     string RightCommentDelimiter { get; }
+    
+    string LeftCustomBlockDelimiter { get; }
+    string RightCustomBlockDelimiter { get; }
+    string CustomBlockIdentifierDelimiter { get; }
+
 }

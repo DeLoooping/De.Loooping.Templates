@@ -1,4 +1,5 @@
 using De.Loooping.Templates.Core.CodeMapping;
+using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template;
 using De.Loooping.Templates.Core.Tests.Tools;
@@ -400,6 +401,7 @@ public class TemplateTests
     [Fact(DisplayName = $"{nameof(TemplateBuilder)} also adds generic type parameters to references")]
     public void TemplateBuilderAlsoAddsGenericTypeParametersOnAddType()
     {
+        // setup
         string content = "{{ String.Concat(things.Select(t => t.Value)) }}";
         var templateBuilder = new TemplateBuilder<GenericTypeTest>(content);
         var template = templateBuilder.Build();
@@ -407,5 +409,21 @@ public class TemplateTests
         // act and validate
         var result = template([new SomeType(), new SomeType()]);
         Assert.Equal("4242", result);
+    }
+
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} throws with bad configuration")]
+    public void TemplateBuilderThrowsWithBadConfiguration()
+    {
+        // setup
+        string content = "Template";
+        TemplateProcessorConfiguration configuration = new TemplateProcessorConfiguration()
+        {
+            LeftContentDelimiter = "{{{",
+            LeftStatementDelimiter = "{{{{"
+        };
+        
+        // act and validate
+        var exception = Assert.Throws<ArgumentException>(() => new TemplateBuilder(content, configuration));
+        _outputHelper.WriteLine(exception.ToString());
     }
 }

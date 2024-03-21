@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Configuration;
+using De.Loooping.Templates.Core.Configuration.Validation;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Tokenizers;
 using Microsoft.CodeAnalysis;
@@ -135,8 +136,21 @@ public abstract class TemplateBuilderBase<TDelegate>
         {
             throw new ArgumentException($"{typeof(TDelegate).Name} must have a return type of string");
         }
-        
+
+        if (configuration != null)
+        {
+            var validationResults = 
+                new TemplateProcessorConfigurationValidation()
+                .Validate(null, configuration);
+            if (validationResults.Failed)
+            {
+                throw new ArgumentException($"{nameof(TemplateProcessorConfiguration)} {nameof(configuration)} is invalid:\n" +
+                                            $"{String.Join('\n', validationResults.Failures)}", nameof(configuration));
+            }
+        }
+
         _configuration = configuration ?? new();
+        
         _template = template;
         _parseOptions = CSharpParseOptions.Default
             .WithLanguageVersion(_configuration.LanguageVersion)

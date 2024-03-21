@@ -43,31 +43,37 @@ public class TemplateProcessorConfigurationValidation: IValidateOptions<Template
         // delimiters cannot be empty
         CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftContentDelimiter);
         CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightContentDelimiter);
+        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.ContentFormatDelimiter);
+        
         CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftStatementDelimiter);
         CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightStatementDelimiter);
+        
         CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftCommentDelimiter);
         CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightCommentDelimiter);
         
-        // left delimiters must be completely distinct (cannot be part of another left delimiter)
-        CheckAndAddDelimiterFailure(failures, options, 
-            o => o.LeftContentDelimiter, 
-            o => o.LeftStatementDelimiter);
-        CheckAndAddDelimiterFailure(failures, options, 
-            o => o.LeftContentDelimiter, 
-            o => o.LeftCommentDelimiter);
-        CheckAndAddDelimiterFailure(failures, options, 
-            o => o.LeftStatementDelimiter, 
-            o => o.LeftContentDelimiter);
-        CheckAndAddDelimiterFailure(failures, options, 
-            o => o.LeftStatementDelimiter, 
-            o => o.LeftCommentDelimiter);
-        CheckAndAddDelimiterFailure(failures, options, 
-            o => o.LeftCommentDelimiter, 
-            o => o.LeftContentDelimiter);
-        CheckAndAddDelimiterFailure(failures, options, 
-            o => o.LeftCommentDelimiter, 
-            o => o.LeftStatementDelimiter);
-
+        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftCustomBlockDelimiter);
+        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightCustomBlockDelimiter);
+        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.CustomBlockIdentifierDelimiter);
+        
+        // left delimiters must be distinct (cannot be the beginning of another left delimiter)
+        var leftDelimiters = new List<Expression<Func<TemplateProcessorConfiguration, string>>>()
+        {
+            o => o.LeftContentDelimiter,
+            o => o.LeftStatementDelimiter,
+            o => o.LeftCommentDelimiter,
+            o => o.LeftCustomBlockDelimiter
+        };
+        for (int i = 0; i < leftDelimiters.Count; i++)
+        {
+            for (int j = i+1; j < leftDelimiters.Count; j++)
+            {
+                var left = leftDelimiters[i];
+                var right = leftDelimiters[j];
+                CheckAndAddDelimiterFailure(failures, options, left, right);
+                CheckAndAddDelimiterFailure(failures, options, right, left);
+            }
+        }
+        
         if (failures.Any())
         {
             return ValidateOptionsResult.Fail(failures);
