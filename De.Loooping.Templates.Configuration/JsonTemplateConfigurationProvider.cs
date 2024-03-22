@@ -50,7 +50,9 @@ public class JsonTemplateConfigurationProvider<TDelegate>: JsonConfigurationProv
             LeftStatementDelimiter = "/*{%",
             RightStatementDelimiter = "%}*/",
             LeftCommentDelimiter = "/*{#",
-            RightCommentDelimiter = "#}*/"
+            RightCommentDelimiter = "#}*/",
+            LeftCustomBlockDelimiter = "/*{$",
+            RightCustomBlockDelimiter = "$}*/"
         });
         
         _templateBuilderExtender?.Invoke(builder);

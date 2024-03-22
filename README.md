@@ -13,7 +13,6 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 - Built-in value formatting via [.NET format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types)
 - Error tracking, so exceptions return the error location inside your template
 
-
 ## Installation
 - Add NuGet package `De.Loooping.Templates.Core.XXX.nupkg` to your project, where XXX is the version number (e.g. "0.4.0")
 - If you want to use the configuration extensions, also add `De.Loooping.Templates.Configuration.XXX.nupkg`.
@@ -21,6 +20,7 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 ## Basic template syntax
 
 A template consists of different elements that are used in turns to produce the intended output.  
+
 These elements are:
 
 
@@ -75,9 +75,16 @@ Syntax: `{# this is a comment #}`
 The content of comment blocks is ignored in the output, so you can use them to add descriptions or explanations to your template.
 
 
+### Custom blocks
+Syntax: `{$CUSTOM_BLOCK_IDENTIFIER:content string$}`
+
+Custom blocks have a unique identifier and process a `content` string to provide some output. The syntax of the `content` string and
+the output created are defined by the custom blocks implementation.
+
+
 ### Literals
 
-Literals have no special Syntax or delimiters. Everything that is not a content, statement or comment block is a literal.  
+Literals have no special Syntax or delimiters. Everything that is not a content, statement, comment or custom block is a literal.  
 Literals will be added to the output as-is, so usually the biggest part of a template consists of literals.
 
 Example:
@@ -111,6 +118,44 @@ public void Main()
   Console.WriteLine(output); // will write "42 horses go to the river" to the console
 }
 ```
+
+## Building and using custom blocks
+
+Custom blocks must implement the interface `ICustomBlock`.
+
+An example of a simple custom block is the predefined `EnvironmentVariableContentBlock`. It takes the name of a environment variable and returns its content:
+```
+public class EnvironmentVariableContentBlock: ICustomBlock
+{
+    public string DefaultIdentifier => "ENV";
+    
+    public string Evaluate(string content)
+    {
+        return Environment.GetEnvironmentVariable(content) ?? String.Empty;
+    }
+}
+```
+
+Usage:
+```
+public void Main()
+{
+  string templateString = "{$ENV:VariableName$}";
+  TemplateBuilder templateBuilder = new TemplateBuilder(templateString);
+  templateBuilder.AddCustomBlock(new EnvironmentVariableContentBlock());
+  var template = templateBuilder.Build();
+  var output = template();
+  Console.WriteLine(output); // will write the content of environment variable 'VariableName' to the console
+}
+```
+
+If you want to use an identifier that is different to the custom blocks default identifier, you can do so:
+```
+  templateBuilder.AddCustomBlock(new EnvironmentVariableContentBlock(), "ANOTHER_IDENTIFIER");
+```
+
+HINT: custom block identifiers must not contain any whitespaces!
+
 
 ## Changing delimiters
 
@@ -192,7 +237,7 @@ public void Configure(ConfigurationManager configuration)
 }
 ```
 
-If you need to add types, references or usings to the `TemplateBuilder`:
+If you need to add types, references or usings to the `TemplateBuilder` or change any of the delimiters:
 ```C#
 public void Configure(ConfigurationManager configuration)
 {
@@ -202,6 +247,7 @@ public void Configure(ConfigurationManager configuration)
         builder.AddType(typeof(List<>));
         builder.AddReference(typeof(IDictionary<,>).Assembly);
         builder.AddUsing("Custom.Namespace");
+        builder.Configuration.LeftContentDelimiter = "{{{";
     });
 }
 ```

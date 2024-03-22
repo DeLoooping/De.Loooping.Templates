@@ -1,18 +1,10 @@
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Template;
-using Xunit.Abstractions;
 
 namespace De.Loooping.Templates.Core.Tests.Template;
 
 public class LiteralTests
 {
-    private readonly ITestOutputHelper _outputHelper;
-
-    public LiteralTests(ITestOutputHelper outputHelper)
-    {
-        _outputHelper = outputHelper;
-    }
-
     [Theory(DisplayName = "Literals with special characters are correctly returned in the output")]
     [InlineData("start\n\b\t\x0A\x00\n\\end")]
     [InlineData("start\"\n\b\t\x0A\x00\n\\end")]

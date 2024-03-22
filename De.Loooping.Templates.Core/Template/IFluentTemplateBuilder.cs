@@ -1,4 +1,5 @@
 using System.Reflection;
+using De.Loooping.Templates.Core.Template.CustomBlocks;
 
 namespace De.Loooping.Templates.Core.Template;
 

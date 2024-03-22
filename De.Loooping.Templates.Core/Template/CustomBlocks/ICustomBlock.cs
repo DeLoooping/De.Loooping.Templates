@@ -1,4 +1,4 @@
-namespace De.Loooping.Templates.Core.Template;
+namespace De.Loooping.Templates.Core.Template.CustomBlocks;
 
 public interface ICustomBlock
 {

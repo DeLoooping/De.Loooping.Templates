@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Diagnostic;
+using De.Loooping.Templates.Core.Template.CustomBlocks;
 using De.Loooping.Templates.Core.Tokenizers;
 using De.Loooping.Templates.Core.Tools;
 using Microsoft.CodeAnalysis;

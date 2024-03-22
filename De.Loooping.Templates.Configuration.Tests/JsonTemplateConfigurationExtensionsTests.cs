@@ -59,6 +59,7 @@ public class JsonTemplateConfigurationExtensionsTests
             build: builder =>
             {
                 builder.AddType(typeof(List<>));
+                builder.Configuration.LeftContentDelimiter = "{{{";
             });
 
         var serviceProvider = new ServiceCollection()

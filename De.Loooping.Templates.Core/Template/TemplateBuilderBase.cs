@@ -6,6 +6,7 @@ using De.Loooping.Templates.Core.CodeMapping;
 using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Configuration.Validation;
 using De.Loooping.Templates.Core.Diagnostic;
+using De.Loooping.Templates.Core.Template.CustomBlocks;
 using De.Loooping.Templates.Core.Tokenizers;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -23,17 +24,19 @@ public abstract class TemplateBuilderBase<TDelegate>
 
     private static readonly Regex _containsWhitespaceRegex = new Regex("\\s", RegexOptions.Compiled);
 
-    private readonly TemplateProcessorConfiguration _configuration;
     private readonly string _template;
     private readonly CSharpParseOptions _parseOptions;
     
     private CodeMapper? _codeMapper = null;
-    
+
     private readonly Lazy<List<KeyValuePair<string, Type>>> _parameters;
     private IEnumerable<KeyValuePair<string, Type>> Parameters => _parameters.Value;
 
     private Dictionary<string, ICustomBlock> _customBlocks = new();
     internal IEnumerable<ICustomBlock> CustomBlocks => _customBlocks.Values; // used for tests
+
+    private readonly TemplateProcessorConfiguration _configuration;
+    public TemplateProcessorConfiguration Configuration => _configuration;
 
     public HashSet<string> Usings { get; } = new();
     public HashSet<Assembly> References { get; } = new();

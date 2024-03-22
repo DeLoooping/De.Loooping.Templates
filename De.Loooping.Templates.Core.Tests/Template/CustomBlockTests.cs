@@ -1,18 +1,11 @@
 using De.Loooping.Templates.Core.Template;
-using Xunit.Abstractions;
+using De.Loooping.Templates.Core.Template.CustomBlocks;
 
 namespace De.Loooping.Templates.Core.Tests.Template;
 
 [Trait("TestCategory", "UnitTest")]
 public class CustomBlockTests
 {
-    private readonly ITestOutputHelper _outputHelper;
-
-    public CustomBlockTests(ITestOutputHelper outputHelper)
-    {
-        _outputHelper = outputHelper;
-    }
-
     private class MyCustomBlock : ICustomBlock
     {
         private readonly string _identifier;

@@ -1,6 +1,7 @@
 using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template;
+using De.Loooping.Templates.Core.Template.CustomBlocks;
 using De.Loooping.Templates.Core.Tests.Tools;
 using Xunit.Abstractions;
 
