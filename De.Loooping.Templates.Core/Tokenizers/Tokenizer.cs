@@ -9,10 +9,16 @@ internal class Tokenizer
     private enum State
     {
         Literal,
+        
         Content,
         ContentFormat,
+        
         Statement,
-        Comment
+        
+        Comment,
+        
+        CustomBlockIdentifier,
+        CustomBlockContent,
     }
 
     private class PotentialNextState
@@ -35,29 +41,44 @@ internal class Tokenizer
         State currentState = State.Literal;
         int currentIndex = 0;
 
+        // content
         var leftContentDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftContentDelimiter, TokenType.LeftContentDelimiter);
         var rightContentDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightContentDelimiter, TokenType.RightContentDelimiter);
         var contentFormatDelimiterExtractor = new DelimiterExtractor(template, _configuration.ContentFormatDelimiter, TokenType.ContentFormatDelimiter);
+        var contentCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightContentDelimiter, _configuration.ContentFormatDelimiter }, _parseOptions);
+        var contentFormatExtractor = new LiteralExtractor(template, new[] { _configuration.RightContentDelimiter });
+
+        // statement
         var leftStatementDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftStatementDelimiter, TokenType.LeftStatementDelimiter);
         var rightStatementDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightStatementDelimiter, TokenType.RightStatementDelimiter);
+        var statementCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightStatementDelimiter }, _parseOptions);
+
+        // comment
         var leftCommentDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftCommentDelimiter, TokenType.LeftCommentDelimiter);
         var rightCommentDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightCommentDelimiter, TokenType.RightCommentDelimiter);
-        
-        var contentCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightContentDelimiter, _configuration.ContentFormatDelimiter }, _parseOptions);
-        var statementCSharpExtractor = new CSharpExtractor(template, new[] { _configuration.RightStatementDelimiter }, _parseOptions);
-        
-        var contentFormatExtractor = new LiteralExtractor(template, new[] { _configuration.RightContentDelimiter });
-        var literalExtractor = new LiteralExtractor(template, new[]
-        {
-            _configuration.LeftContentDelimiter,
-            _configuration.LeftStatementDelimiter,
-            _configuration.LeftCommentDelimiter
-        });
         var commentExtractor = new LiteralExtractor(template, new[]
         {
             _configuration.RightCommentDelimiter
         });
 
+        // custom blocks
+        var leftCustomBlockDelimiterExtractor = new DelimiterExtractor(template, _configuration.LeftCustomBlockDelimiter, TokenType.LeftCustomBlockDelimiter);
+        var rightCustomBlockDelimiterExtractor = new DelimiterExtractor(template, _configuration.RightCustomBlockDelimiter, TokenType.RightCustomBlockDelimiter);
+        var customBlockIdentifierDelimiterExtractor = new DelimiterExtractor(template, _configuration.CustomBlockIdentifierDelimiter, TokenType.CustomBlockIdentifierDelimiter);
+        var customBlockIdentifierExtractor = new LiteralExtractor(template, new[] { _configuration.CustomBlockIdentifierDelimiter },
+            TokenType.Identifier, value => value.Trim());
+        var customBlockContentExtractor = new LiteralExtractor(template, new[] { _configuration.RightCustomBlockDelimiter });
+        
+        // literals
+        var literalExtractor = new LiteralExtractor(template, new[]
+        {
+            _configuration.LeftContentDelimiter,
+            _configuration.LeftStatementDelimiter,
+            _configuration.LeftCommentDelimiter,
+            _configuration.LeftCustomBlockDelimiter
+        });
+
+        // transitions of the state machine
         Dictionary<State, List<PotentialNextState>> stateTransitions = new()
         {
             {
@@ -65,6 +86,7 @@ internal class Tokenizer
                     new PotentialNextState() { Test = leftContentDelimiterExtractor, NextState = State.Content },
                     new PotentialNextState() { Test = leftStatementDelimiterExtractor, NextState = State.Statement },
                     new PotentialNextState() { Test = leftCommentDelimiterExtractor, NextState = State.Comment },
+                    new PotentialNextState() { Test = leftCustomBlockDelimiterExtractor, NextState = State.CustomBlockIdentifier },
                     new PotentialNextState() { Test = literalExtractor, NextState = State.Literal }
                 ]
             },
@@ -92,11 +114,23 @@ internal class Tokenizer
                     new PotentialNextState() { Test = rightCommentDelimiterExtractor, NextState = State.Literal },
                     new PotentialNextState() { Test = commentExtractor, NextState = State.Comment },
                 ]
+            },
+            {
+                State.CustomBlockIdentifier, [
+                    new PotentialNextState() { Test = customBlockIdentifierExtractor, NextState = State.CustomBlockIdentifier },
+                    new PotentialNextState() { Test = customBlockIdentifierDelimiterExtractor, NextState = State.CustomBlockContent }
+                ]
+            },
+            {
+                State.CustomBlockContent, [
+                    new PotentialNextState() { Test = customBlockContentExtractor, NextState = State.CustomBlockContent },
+                    new PotentialNextState() { Test = rightCustomBlockDelimiterExtractor, NextState = State.Literal }
+                ]
             }
         };
         
         List<Token> result = new();
-        while (currentIndex<template.Length)
+        while (currentIndex < template.Length)
         {
             if (!stateTransitions.TryGetValue(currentState, out var potentialNextStates))
             {

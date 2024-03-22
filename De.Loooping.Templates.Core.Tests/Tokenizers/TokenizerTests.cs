@@ -10,26 +10,42 @@ public class TokenizerTests
     private static Mock<ITokenizerConfiguration> CreateConfigurationMock()
     {
         var configurationMock = new Mock<ITokenizerConfiguration>();
+        
         configurationMock.Setup(configuration => configuration.LeftCommentDelimiter).Returns("{#");
         configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("#}");
+        
         configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("{{");
         configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns("}}");
         configurationMock.Setup(configuration => configuration.ContentFormatDelimiter).Returns(":");
+        
         configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("{%");
         configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("%}");
+        
+        configurationMock.Setup(configuration => configuration.LeftCustomBlockDelimiter).Returns("{$");
+        configurationMock.Setup(configuration => configuration.RightCustomBlockDelimiter).Returns("$}");
+        configurationMock.Setup(configuration => configuration.CustomBlockIdentifierDelimiter).Returns(":");
+        
         return configurationMock;
     }
 
     private static Mock<ITokenizerConfiguration> CreateSingleDelimiterConfigurationMock()
     {
         var configurationMock = new Mock<ITokenizerConfiguration>();
+        
         configurationMock.Setup(configuration => configuration.LeftCommentDelimiter).Returns("{");
         configurationMock.Setup(configuration => configuration.RightCommentDelimiter).Returns("}");
+        
         configurationMock.Setup(configuration => configuration.LeftContentDelimiter).Returns("<");
         configurationMock.Setup(configuration => configuration.RightContentDelimiter).Returns(">");
         configurationMock.Setup(configuration => configuration.ContentFormatDelimiter).Returns("%");
+        
         configurationMock.Setup(configuration => configuration.LeftStatementDelimiter).Returns("[");
         configurationMock.Setup(configuration => configuration.RightStatementDelimiter).Returns("]");
+
+        configurationMock.Setup(configuration => configuration.LeftCustomBlockDelimiter).Returns("$");
+        configurationMock.Setup(configuration => configuration.RightCustomBlockDelimiter).Returns("$");
+        configurationMock.Setup(configuration => configuration.CustomBlockIdentifierDelimiter).Returns(":");
+        
         return configurationMock;
     }
 
@@ -405,6 +421,56 @@ public class TokenizerTests
             {
                 Assert.Equal(TokenType.RightContentDelimiter, token.TokenType);
                 Assert.Equal(">", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("right literal", token.Value);
+            }
+        );
+    }
+
+    [Fact(DisplayName = $"{nameof(Tokenizer)} extracts custom blocks")]
+    public void TokenizerExtractsCustomBlocks()
+    {
+        // setup
+        var configurationMock = CreateConfigurationMock();
+        Tokenizer tokenizer = CreateTokenizer(configurationMock.Object);
+
+        // act
+        var result = tokenizer.Tokenize("left literal{$ Identifier : Content $}right literal");
+            
+        // validate
+        Assert.Collection(result,
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal("left literal", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.LeftCustomBlockDelimiter, token.TokenType);
+                Assert.Equal("{$", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Identifier, token.TokenType);
+                Assert.Equal("Identifier", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.CustomBlockIdentifierDelimiter, token.TokenType);
+                Assert.Equal(":", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.Literal, token.TokenType);
+                Assert.Equal(" Content ", token.Value);
+            },
+            token =>
+            {
+                Assert.Equal(TokenType.RightCustomBlockDelimiter, token.TokenType);
+                Assert.Equal("$}", token.Value);
             },
             token =>
             {

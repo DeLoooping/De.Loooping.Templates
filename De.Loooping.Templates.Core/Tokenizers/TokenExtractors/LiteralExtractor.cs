@@ -4,11 +4,15 @@ namespace De.Loooping.Templates.Core.Tokenizers.TokenExtractors;
 
 internal class LiteralExtractor: AbstractTokenExtractor
 {
+    private readonly TokenType _tokenType;
+    private readonly Func<string, string> _valueTransformer;
     private readonly Regex _literalRegex;
     
-    public LiteralExtractor(string toBeScanned, IEnumerable<string> rightDelimiters)
+    public LiteralExtractor(string toBeScanned, IEnumerable<string> rightDelimiters, TokenType tokenType = TokenType.Literal, Func<string, string>? valueTransformer = null)
         : base(toBeScanned)
     {
+        _tokenType = tokenType;
+        _valueTransformer = valueTransformer ?? (v => v);
         IEnumerable<string> escapedDelimiters = rightDelimiters.Select(rightDelimiter => Regex.Escape(rightDelimiter));
         string rightDelimitersExpression = String.Join("|", escapedDelimiters);
         _literalRegex = new Regex($"\\G(?<value>(.|\n)*?)({rightDelimitersExpression}|$)", RegexOptions.Compiled);
@@ -30,10 +34,11 @@ internal class LiteralExtractor: AbstractTokenExtractor
             return false;
         }
 
+        string finalValue = _valueTransformer(value);
         token = new Token()
         {
-            TokenType = TokenType.Literal,
-            Value = value,
+            TokenType = _tokenType,
+            Value = finalValue,
             CharactersConsumed = value.Length,
             StartIndex = startIndex
         };

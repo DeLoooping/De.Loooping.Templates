@@ -8,4 +8,5 @@ public interface ITemplateBuilder
     void AddType(Type type);
     void AddUsing(string @using);
     void AddReference(Assembly reference);
+    void AddCustomBlock(ICustomBlock customBlock, string? identifier = null);
 }

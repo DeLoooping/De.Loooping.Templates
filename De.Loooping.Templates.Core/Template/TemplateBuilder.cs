@@ -37,6 +37,12 @@ public sealed class TemplateBuilder<TDelegate> : TemplateBuilderBase<TDelegate>,
         return this;
     }
 
+    public TemplateBuilder<TDelegate> WithCustomBlock(ICustomBlock customBlock, string? identifier = null)
+    {
+        AddCustomBlock(customBlock, identifier);
+        return this;
+    }
+
     #endregion
 
     #region IFluentTemplateBuilder
@@ -59,6 +65,11 @@ public sealed class TemplateBuilder<TDelegate> : TemplateBuilderBase<TDelegate>,
     IFluentTemplateBuilder IFluentTemplateBuilder.WithType<T>()
     {
         return WithType<T>();
+    }
+
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithCustomBlock(ICustomBlock customBlock, string? identifier)
+    {
+        return WithCustomBlock(customBlock, identifier);
     }
 
     #endregion
@@ -96,6 +107,12 @@ public sealed class TemplateBuilder : TemplateBuilderBase<Process>, IFluentTempl
         AddReference(reference);
         return this;
     }
+
+    public TemplateBuilder WithCustomBlock(ICustomBlock customBlock, string? identifier = null)
+    {
+        AddCustomBlock(customBlock, identifier);
+        return this;
+    }
     
     #endregion
     
@@ -121,5 +138,10 @@ public sealed class TemplateBuilder : TemplateBuilderBase<Process>, IFluentTempl
         return WithType<T>();
     }
 
+    IFluentTemplateBuilder IFluentTemplateBuilder.WithCustomBlock(ICustomBlock customBlock, string? identifier)
+    {
+        return WithCustomBlock(customBlock, identifier);
+    }
+    
     #endregion
 }

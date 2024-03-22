@@ -61,4 +61,42 @@ public class LiteralExtractorTests
         Assert.Equal(9, token.CharactersConsumed);
         Assert.Equal(8, token.StartIndex);
     }
+    
+    [Fact(DisplayName = $"{nameof(LiteralExtractor)} returns custom token type")]
+    public void LiteralExtractorReturnsCustomTokenType()
+    {
+        // setup
+        string toBeScanned = "preambel literal ";
+        var extractor = new LiteralExtractor(toBeScanned, ["}"], TokenType.Identifier);
+
+        // act
+        bool isExtracted = extractor.TryExtract(8, out var token);
+
+        // verify
+        Assert.True(isExtracted);
+        Assert.NotNull(token);
+        Assert.Equal(TokenType.Identifier, token.TokenType);
+        Assert.Equal(" literal ", token.Value);
+        Assert.Equal(9, token.CharactersConsumed);
+        Assert.Equal(8, token.StartIndex);
+    }
+    
+    [Fact(DisplayName = $"{nameof(LiteralExtractor)} executes value transformer")]
+    public void LiteralExtractorExecutesValueTransformer()
+    {
+        // setup
+        string toBeScanned = "preambel literal ";
+        var extractor = new LiteralExtractor(toBeScanned, ["}"], TokenType.Literal, v=>"abc");
+
+        // act
+        bool isExtracted = extractor.TryExtract(8, out var token);
+
+        // verify
+        Assert.True(isExtracted);
+        Assert.NotNull(token);
+        Assert.Equal(TokenType.Literal, token.TokenType);
+        Assert.Equal("abc", token.Value);
+        Assert.Equal(9, token.CharactersConsumed);
+        Assert.Equal(8, token.StartIndex);
+    }
 }

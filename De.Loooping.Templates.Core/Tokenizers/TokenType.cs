@@ -11,7 +11,12 @@ internal enum TokenType
     
     LeftCommentDelimiter,
     RightCommentDelimiter,
+    
+    LeftCustomBlockDelimiter,
+    RightCustomBlockDelimiter,
+    CustomBlockIdentifierDelimiter,
 
     Literal,
     CSharp,
+    Identifier
 }

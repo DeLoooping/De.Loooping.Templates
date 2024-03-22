@@ -8,6 +8,7 @@ public interface IFluentTemplateBuilder<out TTemplateBuilder>: ITemplateBuilder
     TTemplateBuilder WithType(Type type);
     TTemplateBuilder WithUsing(string @using);
     TTemplateBuilder WithReference(Assembly reference);
+    TTemplateBuilder WithCustomBlock(ICustomBlock customBlock, string? identifier = null);
 }
 
 public interface IFluentTemplateBuilder: ITemplateBuilder
@@ -16,4 +17,5 @@ public interface IFluentTemplateBuilder: ITemplateBuilder
     IFluentTemplateBuilder WithType(Type type);
     IFluentTemplateBuilder WithUsing(string @using);
     IFluentTemplateBuilder WithReference(Assembly reference);
+    IFluentTemplateBuilder WithCustomBlock(ICustomBlock customBlock, string? identifier = null);
 }

@@ -14,12 +14,14 @@ internal class TemplateCodeGenerator
     private const string _COMPILATION_TEMPLATE_CLASS_NAME = "Template";
     private const string _COMPILATION_TEMPLATE_ENUMERABLE_METHOD_NAME = "Evaluate";
     
-    private readonly Regex _whitespaceUntilEndRegex = new Regex(@"\G\s*$");
+    private readonly Regex _whitespaceUntilEndRegex = new Regex(@"\G\s*$", RegexOptions.Compiled);
+    private readonly Regex _doubleQuoteSequenceRegex = new Regex("\"*", RegexOptions.Compiled);
     
     private readonly string _namespaceName;
     private readonly string _className;
     private readonly string _methodName;
     private readonly ParseOptions _parseOptions;
+    private readonly Dictionary<string, ICustomBlock> _customBlocks;
 
     private enum ContentState
     {
@@ -27,12 +29,20 @@ internal class TemplateCodeGenerator
         Format
     }
 
-    public TemplateCodeGenerator(string namespaceName, string className, string methodName, ParseOptions parseOptions)
+    private enum CustomBlockState
+    {
+        Identifier,
+        Content,
+        Done
+    }
+
+    public TemplateCodeGenerator(string namespaceName, string className, string methodName, ParseOptions parseOptions, Dictionary<string, ICustomBlock> customBlocks)
     {
         _namespaceName = namespaceName;
         _className = className;
         _methodName = methodName;
         _parseOptions = parseOptions;
+        _customBlocks = customBlocks;
     }
     
     private string GetFullName(Type type)
@@ -159,6 +169,10 @@ internal class TemplateCodeGenerator
                     codeMapper.AddNilGeneratingCode(token.Value);
                     EvaluateStatement(tokenEnumerator, codeMapper);
                     break;
+                case TokenType.LeftCustomBlockDelimiter:
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateCustomBlock(tokenEnumerator, codeMapper);
+                    break;
                 default:
                     throw UnexpectedTokenException(token, codeMapper);
             }
@@ -267,6 +281,84 @@ internal class TemplateCodeGenerator
         }
     }
     
+    private void EvaluateCustomBlock(IEnumerator<Token> tokenEnumerator, CodeMapper codeMapper)
+    {
+        codeMapper.AddGeneratedCodeFromNil("yield return ");
+
+        CustomBlockState currentState = CustomBlockState.Identifier;
+        ICustomBlock? customBlock = null;
+        while (tokenEnumerator.MoveNext())
+        {
+            var token = tokenEnumerator.Current;
+            switch (token.TokenType)
+            {
+                case TokenType.Identifier:
+                    if (customBlock != null || currentState != CustomBlockState.Identifier)
+                    {
+                        throw UnexpectedTokenException(token, codeMapper);
+                    }
+                    
+                    string identifier = token.Value.Trim();
+                    if (String.IsNullOrWhiteSpace(identifier))
+                    {
+                        throw UnexpectedTokenException(token, codeMapper);
+                    }
+
+                    if (!_customBlocks.TryGetValue(identifier, out customBlock))
+                    {
+                        var location = codeMapper.GetGeneratingCodeLocation(codeMapper.GeneratingCodeLength);
+                        var error = new Error($"Unknown custom block identifier '{identifier}'", location);
+                        throw new SyntaxErrorException($"Unknown custom block identifier", [error]);
+                    }
+
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    break;
+                case TokenType.CustomBlockIdentifierDelimiter:
+                    if (currentState != CustomBlockState.Identifier)
+                    {
+                        throw UnexpectedTokenException(token, codeMapper);
+                    }
+                    
+                    currentState = CustomBlockState.Content;
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    break;
+                case TokenType.Literal:
+                    if (customBlock == null || currentState != CustomBlockState.Content)
+                    {
+                        throw UnexpectedTokenException(token, codeMapper);
+                    }
+
+                    string content = token.Value;
+                    string translation = customBlock.Evaluate(content);
+                    string stringDelimiter = GetSaveRawStringDelimiter(translation);
+                    codeMapper.AddGeneratedCodeFromNil($"\n{stringDelimiter}\n");
+                    codeMapper.AddTranslatedCode(content, translation);
+                    codeMapper.AddGeneratedCodeFromNil($"\n{stringDelimiter}");
+
+                    currentState = CustomBlockState.Done;
+                    break;
+                case TokenType.RightCustomBlockDelimiter:
+                    if (currentState != CustomBlockState.Done)
+                    {
+                        throw UnexpectedTokenException(token, codeMapper);
+                    }
+                    
+                    codeMapper.AddNilGeneratingCode(token.Value);
+                    codeMapper.AddGeneratedCodeFromNil(";\n");
+                    
+                    return;
+                default:
+                    throw UnexpectedTokenException(token, codeMapper);
+            }
+        }
+    }
+
+    private string GetSaveRawStringDelimiter(string translation)
+    {
+        int longestSequence = Math.Max(_doubleQuoteSequenceRegex.Matches(translation).Select(m => m.Length).Max(), 3);
+        return String.Concat(Enumerable.Repeat("\"", longestSequence + 1));
+    }
+
     private static SyntaxErrorException UnexpectedTokenException(Token token, CodeMapper codeMapper)
     {
         return new SyntaxErrorException("Unexpected token", [

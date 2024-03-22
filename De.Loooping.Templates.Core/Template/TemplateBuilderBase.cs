@@ -21,14 +21,24 @@ public abstract class TemplateBuilderBase<TDelegate>
     private const string _CALLER_CLASS = "TemplateCaller";
     private const string _CALLER_METHOD = "Run";
 
+    private static readonly Regex _containsWhitespaceRegex = new Regex("\\s", RegexOptions.Compiled);
+
     private readonly TemplateProcessorConfiguration _configuration;
     private readonly string _template;
     private readonly CSharpParseOptions _parseOptions;
-
-    private readonly Lazy<List<KeyValuePair<string, Type>>> _parameters;
     
     private CodeMapper? _codeMapper = null;
+    
+    private readonly Lazy<List<KeyValuePair<string, Type>>> _parameters;
+    private IEnumerable<KeyValuePair<string, Type>> Parameters => _parameters.Value;
 
+    private Dictionary<string, ICustomBlock> _customBlocks = new();
+    internal IEnumerable<ICustomBlock> CustomBlocks => _customBlocks.Values; // used for tests
+
+    public HashSet<string> Usings { get; } = new();
+    public HashSet<Assembly> References { get; } = new();
+    
+    
     #region convenience methods
     public void AddType<T>()
     {
@@ -50,6 +60,29 @@ public abstract class TemplateBuilderBase<TDelegate>
         AddReference(reference, References);
     }
     #endregion
+
+    public void AddCustomBlock(ICustomBlock customBlock, string? identifier = null)
+    {
+        if (identifier != null && _containsWhitespaceRegex.IsMatch(identifier))
+        {
+            throw new ArgumentException(
+                $"A custom block identifier must not contain any whitespaces. Bad identifier: '{identifier}'.",
+                nameof(identifier));
+        }
+
+        if (identifier == null && _containsWhitespaceRegex.IsMatch(customBlock.DefaultIdentifier))
+        {
+            throw new ArgumentException(
+                $"A custom block identifier must not contain any whitespaces. Bad identifier: '{customBlock.DefaultIdentifier}'.",
+                $"{nameof(customBlock)}.{nameof(customBlock.DefaultIdentifier)}");
+        }
+        
+        string effectiveIdentifier = identifier ?? customBlock.DefaultIdentifier;
+        if (!_customBlocks.TryAdd(effectiveIdentifier, customBlock))
+        {
+            throw new ArgumentException($"A custom block with identifier '{identifier}' was already added.");
+        }
+    }
 
     private void AddType(Type type, HashSet<Assembly> references, HashSet<string> usings)
     {
@@ -106,12 +139,7 @@ public abstract class TemplateBuilderBase<TDelegate>
             AddReference(assembly);
         }
     }
-
-    private IEnumerable<KeyValuePair<string, Type>> Parameters => _parameters.Value;
     
-    public HashSet<string> Usings { get; } = new();
-    public HashSet<Assembly> References { get; } = new();
-
     internal CodeMapper CodeMapper
     {
         get
@@ -318,7 +346,7 @@ public abstract class TemplateBuilderBase<TDelegate>
         Tokenizer tokenizer = new Tokenizer(_configuration, _parseOptions);
         List<Token> tokens = tokenizer.Tokenize(_template);
 
-        TemplateCodeGenerator templateCodeGenerator = new(_COMPILATION_NAMESPACE, _CALLER_CLASS, _CALLER_METHOD, _parseOptions);
+        TemplateCodeGenerator templateCodeGenerator = new(_COMPILATION_NAMESPACE, _CALLER_CLASS, _CALLER_METHOD, _parseOptions, _customBlocks);
         string templateCode = templateCodeGenerator.Generate(tokens, Parameters, usings, out codeMapper);
 
         return templateCode;
