@@ -57,8 +57,8 @@ public class TemplateBuilderTests
         Assert.Equal("|0|\n|1|\n|2|\n", result);
     }
 
-    [Fact(DisplayName = "Template implicitely adds references to input type assemblies")]
-    public void TemplateAddsReferencesOfInputTypes()
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} implicitely adds references to input type assemblies")]
+    public void TemplateBuilderAddsReferencesOfInputTypes()
     {
         // setup
         var counter = new Counter();
@@ -104,6 +104,21 @@ public class TemplateBuilderTests
 
         // verify
         Assert.Equal("Start\n", result);
+    }
+
+    [Fact(DisplayName = "Empty template works")]
+    public void EmptyTemplateWorks()
+    {
+        // setup
+        string content = String.Empty;
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        var template = templateBuilder.Build();
+
+        // act
+        string result = template();
+
+        // verify
+        Assert.Equal(String.Empty, result);
     }
     
     public class CompilerErrorsAreAtTheRightLocationData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>

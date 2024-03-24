@@ -115,10 +115,10 @@ internal class TemplateCodeGenerator
         int bodyEnd = codeMapper.GeneratedCodeLength;
         
         codeMapper.AddGeneratedCodeFromNil($$"""
+                                                    yield break;
                                              	}
                                              }
                                              """);
-        
         string code = codeMapper.GeneratedCode;
         string body = code.Substring(bodyStart, bodyEnd - bodyStart);
         AssureCodeIsOneStatementBlock(body, codeMapper, bodyStart);
