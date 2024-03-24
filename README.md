@@ -13,8 +13,12 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 - Built-in value formatting via [.NET format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types)
 - Error tracking, so exceptions return the error location inside your template
 
+## Dependencies:
+- Target frameworks .NET 7.0 and .NET 8.0 are supported.
+- For compatibility reasons, only C# 11 features are currently supported.
+
 ## Installation
-- Add NuGet package `De.Loooping.Templates.Core.XXX.nupkg` to your project, where XXX is the version number (e.g. "0.4.0")
+- Add NuGet package `De.Loooping.Templates.Core.XXX.nupkg` to your project, where XXX is the version number (e.g. "0.6.0").
 - If you want to use the configuration extensions, also add `De.Loooping.Templates.Configuration.XXX.nupkg`.
 
 ## Basic template syntax

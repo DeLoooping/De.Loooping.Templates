@@ -3,10 +3,10 @@
     <TargetFrameworks>net8.0;net7.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.6.0-alpha0002</Version>
+    <Version>0.6.0-alpha0003</Version>
     <AssemblyVersion>0.6.0.0</AssemblyVersion>
     <FileVersion>0.6.0.0</FileVersion>
-    <InformationalVersion>0.6.0-alpha.2+Branch.develop.Sha.5a709187d8fae1b065e1bb8e069820ee125c2277</InformationalVersion>
+    <InformationalVersion>0.6.0-alpha.3+Branch.develop.Sha.2b262a9428c870db20700f9cccb8b42f1a032410</InformationalVersion>
     <Authors>Christopher Jung</Authors>
     <Description>De.Loooping.Templates.Configuration contains configuration extensions for the De.Loooping.Templates template engine</Description>
     <Copyright>Copyright (c) 2024 Christopher Jung &amp; contributers</Copyright>
