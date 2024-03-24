@@ -51,12 +51,12 @@ public class TemplateProcessorConfigurationValidationTests
         protected override IEnumerable<(DelimiterSetter firstDelimiterSetter, DelimiterSetter secondDelimiterSetter)> GetData()
         {
             DelimiterSetter[] leftDelimiterSetters =
-            [
-                new((config, value) => config.LeftContentDelimiter = value, nameof(TemplateProcessorConfiguration.LeftContentDelimiter)),
-                new((config, value) => config.LeftStatementDelimiter = value, nameof(TemplateProcessorConfiguration.LeftStatementDelimiter)),
-                new((config, value) => config.LeftCommentDelimiter = value, nameof(TemplateProcessorConfiguration.LeftCommentDelimiter)),
-                new((config, value) => config.LeftCustomBlockDelimiter = value, nameof(TemplateProcessorConfiguration.LeftCustomBlockDelimiter)),
-            ];
+                {
+                    new((config, value) => config.LeftContentDelimiter = value, nameof(TemplateProcessorConfiguration.LeftContentDelimiter)),
+                    new((config, value) => config.LeftStatementDelimiter = value, nameof(TemplateProcessorConfiguration.LeftStatementDelimiter)),
+                    new((config, value) => config.LeftCommentDelimiter = value, nameof(TemplateProcessorConfiguration.LeftCommentDelimiter)),
+                    new((config, value) => config.LeftCustomBlockDelimiter = value, nameof(TemplateProcessorConfiguration.LeftCustomBlockDelimiter)),
+                };
 
             foreach (var firstSetter in leftDelimiterSetters)
             {

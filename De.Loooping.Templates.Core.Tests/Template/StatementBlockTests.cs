@@ -49,17 +49,17 @@ public class StatementBlockTests
         {
             yield return (
                 "{% yield return \"42\"; yield return Test(); }\n private static string Test() { return \"escaped\";\n %}",
-                [(1, 44)],
+                new[] { (1, 44) },
                 true
             );
             yield return (
                 "{% yield return \"42\"; yield return Test(); }\n static string Test() { return \"escaped\";\n %}",
-                [(1, 44)],
+                new[] { (1, 44) },
                 true
             );
             yield return (
                 "{% yield return \"42\"; }\n string Test => { return \"escaped\";\n %}",
-                [(1, 23)],
+                new[] { (1, 23) },
                 true
             );
         }

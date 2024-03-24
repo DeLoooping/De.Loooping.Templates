@@ -15,7 +15,7 @@ internal class LiteralExtractor: AbstractTokenExtractor
         _valueTransformer = valueTransformer ?? (v => v);
         IEnumerable<string> escapedDelimiters = rightDelimiters.Select(rightDelimiter => Regex.Escape(rightDelimiter));
         string rightDelimitersExpression = String.Join("|", escapedDelimiters);
-        _literalRegex = new Regex($"\\G(?<value>(.|\n)*?)({rightDelimitersExpression}|$)", RegexOptions.Compiled);
+        _literalRegex = new Regex($"\\G(?<value>(.|\\n)*?)({rightDelimitersExpression}|\\z)", RegexOptions.Compiled);
     }
 
     public override bool TryExtract(int startIndex, out Token? token)

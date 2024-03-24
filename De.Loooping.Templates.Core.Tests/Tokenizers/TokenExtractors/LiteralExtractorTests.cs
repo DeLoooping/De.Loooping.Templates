@@ -10,7 +10,7 @@ public class LiteralExtractorTests
     {
         // setup
         string toBeScanned = "preambel literal }end";
-        var extractor = new LiteralExtractor(toBeScanned, ["}"]);
+        var extractor = new LiteralExtractor(toBeScanned, new[] { "}" });
 
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);
@@ -29,7 +29,7 @@ public class LiteralExtractorTests
     {
         // setup
         string toBeScanned = "preambel literal }{ another literal }end";
-        var extractor = new LiteralExtractor(toBeScanned, ["}"]);
+        var extractor = new LiteralExtractor(toBeScanned, new[] { "}" });
 
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);
@@ -48,7 +48,7 @@ public class LiteralExtractorTests
     {
         // setup
         string toBeScanned = "preambel literal ";
-        var extractor = new LiteralExtractor(toBeScanned, ["}"]);
+        var extractor = new LiteralExtractor(toBeScanned, new[] { "}" });
 
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);
@@ -67,7 +67,7 @@ public class LiteralExtractorTests
     {
         // setup
         string toBeScanned = "preambel literal ";
-        var extractor = new LiteralExtractor(toBeScanned, ["}"], TokenType.Identifier);
+        var extractor = new LiteralExtractor(toBeScanned, new[] { "}" }, TokenType.Identifier);
 
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);
@@ -86,7 +86,7 @@ public class LiteralExtractorTests
     {
         // setup
         string toBeScanned = "preambel literal ";
-        var extractor = new LiteralExtractor(toBeScanned, ["}"], TokenType.Literal, v=>"abc");
+        var extractor = new LiteralExtractor(toBeScanned, new[] { "}" }, TokenType.Literal, v=>"abc");
 
         // act
         bool isExtracted = extractor.TryExtract(8, out var token);

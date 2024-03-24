@@ -1,4 +1,7 @@
+using System.Data;
+using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.Configuration;
+using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Tokenizers.TokenExtractors;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -26,6 +29,8 @@ internal class Tokenizer
         public required ITokenExtractor Test { get; init; }
         public required State NextState { get; init; }
     }
+
+    private static readonly Regex _newlineRegex = new Regex("\n", RegexOptions.Compiled);
     
     private readonly ITokenizerConfiguration _configuration;
     private readonly CSharpParseOptions _parseOptions;
@@ -149,8 +154,9 @@ internal class Tokenizer
 
             if (nextToken == null && (currentIndex != template.Length || currentState != State.Literal))
             {
-                // TODO: more information about where the syntax error is
-                throw new Exception("Syntax error");
+                var errorLocation = GetCodeLocation(template, currentIndex);
+                Error error = new Error("Unexpected token or end of template", errorLocation);
+                throw new Template.SyntaxErrorException("Syntax error", new[] { error });
             }
 
             if (nextToken != null)
@@ -160,6 +166,22 @@ internal class Tokenizer
             }
         }
 
+        if (currentState != State.Literal)
+        {
+            var errorLocation = GetCodeLocation(template, currentIndex);
+            Error error = new Error("Unexpected end of template", errorLocation);
+            throw new Template.SyntaxErrorException("Syntax error", new[] { error });
+        }
+        
         return result;
+    }
+
+    private CodeLocation GetCodeLocation(string template, int index)
+    {
+        string partialTemplate = template.Substring(0, index);
+        MatchCollection newlineMatches = _newlineRegex.Matches(partialTemplate);
+        int line = newlineMatches.Count + 1;
+        int column = index - (newlineMatches.LastOrDefault()?.Index ?? -1);
+        return new CodeLocation(line, column);
     }
 }

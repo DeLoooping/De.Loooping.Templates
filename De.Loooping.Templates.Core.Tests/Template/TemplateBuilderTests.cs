@@ -89,6 +89,22 @@ public class TemplateBuilderTests
         // verify
         Assert.Equal("012", result);
     }
+
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} respects a newline at the end of the template")]
+    public void TemplateBuilderRespectsNewlineAtEnd()
+    {
+        // setup
+        string content = "Start\n";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content)
+            .WithType<int>();
+        var template = templateBuilder.Build();
+
+        // act
+        string result = template();
+
+        // verify
+        Assert.Equal("Start\n", result);
+    }
     
     public class CompilerErrorsAreAtTheRightLocationData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
     {
@@ -96,7 +112,7 @@ public class TemplateBuilderTests
         {
             yield return (
                 "{# a comment #}\n{%\nyield return \"a\";\nyield return \"b\";return \"c\";\n%}",
-                [(4, 24)],
+                new[] { (4, 24) },
                 true
             );
         }
@@ -177,7 +193,7 @@ public class TemplateBuilderTests
         var template = templateBuilder.Build();
 
         // act and validate
-        var result = template([new SomeType(), new SomeType()]);
+        var result = template(new List<SomeType> { new SomeType(), new SomeType() });
         Assert.Equal("4242", result);
     }
 
@@ -195,6 +211,25 @@ public class TemplateBuilderTests
         // act and validate
         var exception = Assert.Throws<ArgumentException>(() => new TemplateBuilder(content, configuration));
         _outputHelper.WriteLine(exception.ToString());
+    }
+
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} throws {nameof(SyntaxErrorException)} on unexpected end of file")]
+    public void TemplateBuilderThrowsSyntaxErrorOnUnexpectedEndOfFile()
+    {
+        // setiup
+        string content = "Line 1\nLine 2\nLine {{ 3";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content);
+        
+        // act and validate
+        var exception = Assert.Throws<SyntaxErrorException>(() => templateBuilder.Build());
+        
+        Assert.Collection(exception.Errors,
+            error =>
+            {
+                Assert.Equal(3, error.Location.Line);
+                Assert.Equal(10, error.Location.Column);
+            }
+        );
     }
 
     [Fact(DisplayName = $"{nameof(TemplateBuilder)} adds to Usings when calling {nameof(TemplateBuilder.WithUsing)}(..)")]
@@ -428,5 +463,4 @@ public class TemplateBuilderTests
         // verify
         Assert.Contains(customBlock, templateBuilder.CustomBlocks);
     }
-   
 }

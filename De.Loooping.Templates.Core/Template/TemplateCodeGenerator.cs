@@ -15,7 +15,7 @@ internal class TemplateCodeGenerator
     private const string _COMPILATION_TEMPLATE_CLASS_NAME = "Template";
     private const string _COMPILATION_TEMPLATE_ENUMERABLE_METHOD_NAME = "Evaluate";
     
-    private readonly Regex _whitespaceUntilEndRegex = new Regex(@"\G\s*$", RegexOptions.Compiled);
+    private readonly Regex _whitespaceUntilEndRegex = new Regex(@"\G\s*\z", RegexOptions.Compiled);
     private readonly Regex _doubleQuoteSequenceRegex = new Regex("\"*", RegexOptions.Compiled);
     
     private readonly string _namespaceName;

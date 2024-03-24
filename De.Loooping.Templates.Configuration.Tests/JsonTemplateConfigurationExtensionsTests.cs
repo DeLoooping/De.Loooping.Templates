@@ -1,3 +1,4 @@
+using De.Loooping.Templates.Core.Template.CustomBlocks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -27,9 +28,9 @@ public class JsonTemplateConfigurationExtensionsTests
         var config = serviceProvider.GetRequiredService<IOptions<TestConfigurationSection>>().Value;
         
         Assert.Equal(42, config.A);
-        Assert.Equal([1,2,3], config.B);
+        Assert.Equal(new List<int> { 1, 2, 3 }, config.B);
         Assert.Equal("lala", config.C);
-        Assert.Equal(["000", "001", "002"], config.D);
+        Assert.Equal(new List<string> { "000", "001", "002" }, config.D);
     }
 
     public class TestData
@@ -48,9 +49,9 @@ public class JsonTemplateConfigurationExtensionsTests
         TestData testData = new TestData()
         {
             Int = 43,
-            IntList = [1, 2, 3, 4],
+            IntList = new List<int> { 1, 2, 3, 4 },
             String = "lalala",
-            StringList = ["a", "b", "c", "d"]
+            StringList = new List<string> { "a", "b", "c", "d" }
         };
         
         ConfigurationManager configuration = new ConfigurationManager();
