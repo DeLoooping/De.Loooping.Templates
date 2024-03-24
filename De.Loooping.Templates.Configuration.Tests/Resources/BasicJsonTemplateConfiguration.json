@@ -1,7 +1,7 @@
 {
   "TestSection": {
     "A": "/*{{ 2*21 }}*/",
-    "B": [/*{{ String.Join(",", ((int[])[1, 2, 3]).Select(i => i.ToString())) }}*/],
+    "B": [/*{{ String.Join(",", (new int[]{1, 2, 3}).Select(i => i.ToString())) }}*/],
     "C": /*{{ "\"lala\"" }}*/,
     "D": [/*{%
           for (int i=0; i<3; i++) {

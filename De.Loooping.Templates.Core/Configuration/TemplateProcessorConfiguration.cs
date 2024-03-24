@@ -4,7 +4,7 @@ namespace De.Loooping.Templates.Core.Configuration;
 
 public class TemplateProcessorConfiguration: ITokenizerConfiguration
 {
-    public LanguageVersion LanguageVersion { get; set; } = LanguageVersion.CSharp12;
+    public LanguageVersion LanguageVersion { get; set; } = LanguageVersion.CSharp11;
 
     public string LeftContentDelimiter { get; set; } = "{{";
     public string RightContentDelimiter { get; set; } = "}}";

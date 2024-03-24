@@ -3,10 +3,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.5.0</Version>
-    <AssemblyVersion>0.5.0.0</AssemblyVersion>
-    <FileVersion>0.5.0.0</FileVersion>
-    <InformationalVersion>0.5.0+Branch.develop.Sha.2f9218c5218b0dae040ecf87232f9ba1133a25f4</InformationalVersion>
+    <Version>0.6.0-alpha0001</Version>
+    <AssemblyVersion>0.6.0.0</AssemblyVersion>
+    <FileVersion>0.6.0.0</FileVersion>
+    <InformationalVersion>0.6.0-alpha.1+Branch.develop.Sha.4d0dfd205bd906025b79dac443660e05d9e6ffbd</InformationalVersion>
     <Authors>Christopher Jung</Authors>
     <Description>De.Loooping.Templates is A Jinja2 inspired template engine for .NET</Description>
     <Copyright>Copyright (c) 2024 Christopher Jung &amp; contributers</Copyright>
@@ -25,8 +25,8 @@
     <InternalsVisibleTo Include="De.Loooping.Templates.Core.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.9.2" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="[4.5.0,)" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="[8.0.0,)" />
   </ItemGroup>
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="git config core.hooksPath .githooks&#xA;dotnet gitversion . /updateprojectfiles" />

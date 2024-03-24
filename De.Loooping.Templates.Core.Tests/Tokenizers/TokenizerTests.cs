@@ -51,7 +51,7 @@ public class TokenizerTests
 
     private static Tokenizer CreateTokenizer(ITokenizerConfiguration configuration)
     {
-        var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
+        var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp11);
         return new Tokenizer(configuration, options);
     }
 
