@@ -192,8 +192,7 @@ public abstract class TemplateBuilderBase<TDelegate>
 
     private void AddDefaults(HashSet<Assembly> references, HashSet<string> usings)
     {
-        var types = (Type[])
-        [
+        var types = new[] { 
             typeof(int),
             typeof(Enumerable),
             typeof(IEnumerable<>),
@@ -203,7 +202,7 @@ public abstract class TemplateBuilderBase<TDelegate>
             typeof(RuntimeErrorException),
             typeof(CodeLocation),
             typeof(CodeMapper)
-        ];
+        };
         
         foreach (Type type in types)
         {
@@ -278,7 +277,7 @@ public abstract class TemplateBuilderBase<TDelegate>
 
         var compilation = CSharpCompilation.Create(
             assemblyName,
-            [encoded],
+            new[] { encoded },
             references.Select(assembly => MetadataReference.CreateFromFile(assembly.Location)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, usings: Usings)
                 .WithOptimizationLevel(OptimizationLevel.Debug)
@@ -303,7 +302,7 @@ public abstract class TemplateBuilderBase<TDelegate>
 
             var result = compilation.Emit(
                 assemblyStream,
-                embeddedTexts: [EmbeddedText.FromSource(sourceCodePath, sourceText)],
+                embeddedTexts: new[] { EmbeddedText.FromSource(sourceCodePath, sourceText) },
                 options: emitOptions);
 
             if (!result.Success)
@@ -317,8 +316,8 @@ public abstract class TemplateBuilderBase<TDelegate>
             
             // extract template method from created assembly
             var callerClassType = assembly.GetType($"{_COMPILATION_NAMESPACE}.{_CALLER_CLASS}")!;
-            var callerClassConstructor = callerClassType.GetConstructor([typeof(CodeMapper)])!;
-            var callerObject = callerClassConstructor.Invoke([codeMapper]);
+            var callerClassConstructor = callerClassType.GetConstructor(new[] { typeof(CodeMapper) })!;
+            var callerObject = callerClassConstructor.Invoke(new object[] { codeMapper });
             
             var callerMethodType = callerClassType.GetMethod(_CALLER_METHOD)!;
             var d = CreateDelegate(callerMethodType, callerObject);

@@ -44,7 +44,7 @@ public class CodeMapper
         public int End { get; }
     }
     
-    private class CodeMapping()
+    private class CodeMapping
     {
         public required int Index { get; init; }
         

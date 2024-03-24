@@ -82,50 +82,50 @@ internal class Tokenizer
         Dictionary<State, List<PotentialNextState>> stateTransitions = new()
         {
             {
-                State.Literal, [
+                State.Literal, new List<PotentialNextState> {
                     new PotentialNextState() { Test = leftContentDelimiterExtractor, NextState = State.Content },
                     new PotentialNextState() { Test = leftStatementDelimiterExtractor, NextState = State.Statement },
                     new PotentialNextState() { Test = leftCommentDelimiterExtractor, NextState = State.Comment },
                     new PotentialNextState() { Test = leftCustomBlockDelimiterExtractor, NextState = State.CustomBlockIdentifier },
                     new PotentialNextState() { Test = literalExtractor, NextState = State.Literal }
-                ]
+                }
             },
             {
-                State.Content, [
+                State.Content, new List<PotentialNextState> {
                     new PotentialNextState() { Test = contentFormatDelimiterExtractor, NextState = State.ContentFormat },
                     new PotentialNextState() { Test = rightContentDelimiterExtractor, NextState = State.Literal },
                     new PotentialNextState() { Test = contentCSharpExtractor, NextState = State.Content },
-                ]
+                }
             },
             {
-                State.ContentFormat, [
+                State.ContentFormat, new List<PotentialNextState> {
                     new PotentialNextState() { Test = rightContentDelimiterExtractor, NextState = State.Literal },
                     new PotentialNextState() { Test = contentFormatExtractor, NextState = State.ContentFormat },
-                ]
+                }
             },
             {
-                State.Statement, [
+                State.Statement, new List<PotentialNextState> {
                     new PotentialNextState() { Test = rightStatementDelimiterExtractor, NextState = State.Literal },
                     new PotentialNextState() { Test = statementCSharpExtractor, NextState = State.Statement },
-                ]
+                }
             },
             {
-                State.Comment, [
+                State.Comment, new List<PotentialNextState> {
                     new PotentialNextState() { Test = rightCommentDelimiterExtractor, NextState = State.Literal },
                     new PotentialNextState() { Test = commentExtractor, NextState = State.Comment },
-                ]
+                }
             },
             {
-                State.CustomBlockIdentifier, [
+                State.CustomBlockIdentifier, new List<PotentialNextState> {
                     new PotentialNextState() { Test = customBlockIdentifierExtractor, NextState = State.CustomBlockIdentifier },
                     new PotentialNextState() { Test = customBlockIdentifierDelimiterExtractor, NextState = State.CustomBlockContent }
-                ]
+                }
             },
             {
-                State.CustomBlockContent, [
+                State.CustomBlockContent, new List<PotentialNextState> {
                     new PotentialNextState() { Test = customBlockContentExtractor, NextState = State.CustomBlockContent },
                     new PotentialNextState() { Test = rightCustomBlockDelimiterExtractor, NextState = State.Literal }
-                ]
+                }
             }
         };
         

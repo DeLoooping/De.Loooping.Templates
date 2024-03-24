@@ -48,9 +48,9 @@ internal class CSharpExtractor: AbstractTokenExtractor
         
         Type lexerMode = GetType(_MICROSOFT_CODE_ANALYSIS_CSHARP_ASSEMBLY, "LexerMode");
         _LEXER_MODE_SYNTAX = lexerMode.GetField("Syntax")!.GetValue(lexerMode)!;
-        
-        _LEXER_LEX_METHOD = _LEXER_TYPE.GetMethod("Lex", [lexerMode])!;
-        _LEXER_RESET_METHOD = _LEXER_TYPE.GetMethod("Reset", [typeof(int), _DIRECTIVE_STACK_TYPE])!;
+
+        _LEXER_LEX_METHOD = _LEXER_TYPE.GetMethod("Lex", new[] { lexerMode })!;
+        _LEXER_RESET_METHOD = _LEXER_TYPE.GetMethod("Reset", new[] { typeof(int), _DIRECTIVE_STACK_TYPE })!;
 
         Type cSharpSyntaxNodeType = GetType(_MICROSOFT_CODE_ANALYSIS_CSHARP_ASSEMBLY, "CSharpSyntaxNode", "Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax");
         _CSHARP_SYNTAX_NODE_KIND_PROPERTY = cSharpSyntaxNodeType.GetProperty("Kind")!;
@@ -67,7 +67,7 @@ internal class CSharpExtractor: AbstractTokenExtractor
         _rightDelimiters = rightDelimiters.ToList();
 
         var escapedDelimiters = _rightDelimiters.Select(Regex.Escape);
-        _rightDelimiterSearchRegex = new Regex($"\\G(?<whitespace>\\s*)(?<delimiter>({String.Join("|", escapedDelimiters.Concat(["$"]))}))");
+        _rightDelimiterSearchRegex = new Regex($"\\G(?<whitespace>\\s*)(?<delimiter>({String.Join("|", escapedDelimiters.Concat(new[] { "$" }))}))");
     }
 
     public override bool TryExtract(int startIndex, out Token? token)
@@ -87,8 +87,8 @@ internal class CSharpExtractor: AbstractTokenExtractor
                 break;
             }
 
-            _LEXER_RESET_METHOD.Invoke(lexer, [index, _DIRECTIVE_STACK_EMPTY]);
-            object syntaxToken = _LEXER_LEX_METHOD.Invoke(lexer, [_LEXER_MODE_SYNTAX])!;
+            _LEXER_RESET_METHOD.Invoke(lexer, new[] { index, _DIRECTIVE_STACK_EMPTY });
+            object syntaxToken = _LEXER_LEX_METHOD.Invoke(lexer, new[] { _LEXER_MODE_SYNTAX })!;
             int fullWidth = GetFullWidth(syntaxToken);
             if (fullWidth == 0 || _CSHARP_SYNTAX_NODE_KIND_PROPERTY.GetValue(syntaxToken)!.Equals(SyntaxKind.BadToken))
             {

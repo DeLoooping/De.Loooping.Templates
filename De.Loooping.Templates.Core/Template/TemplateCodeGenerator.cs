@@ -309,7 +309,7 @@ internal class TemplateCodeGenerator
                     {
                         var location = codeMapper.GetGeneratingCodeLocation(codeMapper.GeneratingCodeLength);
                         var error = new Error($"Unknown custom block identifier '{identifier}'", location);
-                        throw new SyntaxErrorException($"Unknown custom block identifier", [error]);
+                        throw new SyntaxErrorException($"Unknown custom block identifier", new[] { error });
                     }
 
                     codeMapper.AddNilGeneratingCode(token.Value);
@@ -362,10 +362,10 @@ internal class TemplateCodeGenerator
 
     private static SyntaxErrorException UnexpectedTokenException(Token token, CodeMapper codeMapper)
     {
-        return new SyntaxErrorException("Unexpected token", [
+        return new SyntaxErrorException("Unexpected token", new[] { 
             new Error($"Unexpected token {token.TokenType} with value '{token.Value}'",
                 codeMapper.GetGeneratingCodeLocation(codeMapper.GeneratedCodeLength))
-        ]);
+        });
     }
     
     private static void AssureCodeIsExpression(string code, CodeMapper codeMapper, int startPosition)
