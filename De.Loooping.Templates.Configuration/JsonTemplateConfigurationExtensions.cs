@@ -5,14 +5,14 @@ namespace De.Loooping.Templates.Configuration;
 
 public static class JsonTemplateConfigurationExtensions
 {
-    public static void AddJsonTemplateFile(this IConfigurationBuilder builder, string path,
+    public static IConfigurationBuilder AddJsonTemplateFile(this IConfigurationBuilder builder, string path,
         bool optional = false, bool reloadOnChange = false, Action<IFluentTemplateBuilder>? build = null)
     {
         Func<Process, string> inputInjector = process => process();
-        AddJsonTemplateFile<Process>(builder, path, inputInjector, optional, reloadOnChange, build);
+        return AddJsonTemplateFile<Process>(builder, path, inputInjector, optional, reloadOnChange, build);
     }
 
-    public static void AddJsonTemplateFile<TDelegate>(this IConfigurationBuilder builder, string path,
+    public static IConfigurationBuilder AddJsonTemplateFile<TDelegate>(this IConfigurationBuilder builder, string path,
         Func<TDelegate, string> inputInjector, bool optional = false, bool reloadOnChange = false, Action<IFluentTemplateBuilder>? build = null)
         where TDelegate : class, MulticastDelegate
     {
@@ -26,7 +26,7 @@ public static class JsonTemplateConfigurationExtensions
             throw new ArgumentException($"{nameof(path)} must not be null", nameof(path));
         }
 
-        builder.Add((Action<JsonTemplateConfigurationSource<TDelegate>>)(s =>
+        return builder.Add((Action<JsonTemplateConfigurationSource<TDelegate>>)(s =>
         {
             s.Path = path;
             s.Optional = optional;
