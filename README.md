@@ -18,8 +18,8 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 - For compatibility reasons, only C# 11 features are currently supported.
 
 ## Installation
-- Add NuGet package `De.Loooping.Templates.Core.XXX.nupkg` to your project, where XXX is the version number (e.g. "0.6.0").
-- If you want to use the configuration extensions, also add `De.Loooping.Templates.Configuration.XXX.nupkg`.
+- Add NuGet package `De.Loooping.Templates.Core` to your project.
+- If you want to use the configuration extensions, also add `De.Loooping.Templates.Configuration`.
 
 ## Basic template syntax
 

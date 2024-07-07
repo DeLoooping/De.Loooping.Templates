@@ -1,3 +1,4 @@
+using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Template;
 using Xunit.Abstractions;
 
@@ -27,6 +28,23 @@ public class ContentBlockTests
 
         // verify
         Assert.Equal("42", result);
+    }
+
+    [Fact(DisplayName = $"Content block is not evaluated when {nameof(TemplateProcessorConfiguration)}.{nameof(TemplateProcessorConfiguration.EvaluateContentBlocks)} = false")]
+    public void ContentBlockIsNotEvaluatedWhenEvaluateContentBlocksIsFalse()
+    {
+        // setup
+        string content = "{{ 42 }}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content)
+            .WithType<int>();
+        templateBuilder.Configuration.EvaluateContentBlocks = false;
+        var template = templateBuilder.Build();
+
+        // act
+        string result = template();
+
+        // verify
+        Assert.Equal(content, result);
     }
 
     [Fact(DisplayName = "Content can be formatted")]

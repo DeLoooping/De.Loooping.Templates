@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using De.Loooping.Templates.Core.CodeMapping;
+using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template.CustomBlocks;
 using De.Loooping.Templates.Core.Tokenizers;
@@ -21,6 +22,7 @@ internal class TemplateCodeGenerator
     private readonly string _namespaceName;
     private readonly string _className;
     private readonly string _methodName;
+    private readonly ICodeGeneratorConfiguration _configuration;
     private readonly ParseOptions _parseOptions;
     private readonly Dictionary<string, ICustomBlock> _customBlocks;
 
@@ -37,11 +39,12 @@ internal class TemplateCodeGenerator
         Done
     }
 
-    public TemplateCodeGenerator(string namespaceName, string className, string methodName, ParseOptions parseOptions, Dictionary<string, ICustomBlock> customBlocks)
+    public TemplateCodeGenerator(string namespaceName, string className, string methodName, ICodeGeneratorConfiguration configuration, ParseOptions parseOptions, Dictionary<string, ICustomBlock> customBlocks)
     {
         _namespaceName = namespaceName;
         _className = className;
         _methodName = methodName;
+        _configuration = configuration;
         _parseOptions = parseOptions;
         _customBlocks = customBlocks;
     }
@@ -134,44 +137,18 @@ internal class TemplateCodeGenerator
             switch (token.TokenType)
             {
                 case TokenType.Literal:
-                    string literal = SymbolDisplay.FormatLiteral(token.Value, true); // can return string literal ("") or verbatim string (@"")
-                    bool isVerbatimString = literal.Substring(0, 2) == "@\"";
-                    
-                    string quotePrefix;
-                    EscapeSequenceMatcher escapeSequenceMatcher;
-                    if (isVerbatimString)
-                    {
-                        // verbatim string
-                        literal = literal.Substring(2, literal.Length - 3); // remove verbatim quotes @"..."
-                        quotePrefix = "@\"";
-                        escapeSequenceMatcher = CodeMapper.VerbatimStringEscapeSequenceMatcher;
-                    }
-                    else
-                    {
-                        // string literal
-                        literal = literal.Substring(1, literal.Length - 2); // remove quotes "..."
-                        quotePrefix = "\"";
-                        escapeSequenceMatcher = CodeMapper.StringLiteralEscapeSequenceMatcher;
-                    }
-                    
-                    codeMapper.AddGeneratedCodeFromNil($"yield return {quotePrefix}");
-                    codeMapper.AddEscapedUserProvidedCode(literal, escapeSequenceMatcher);
-                    codeMapper.AddGeneratedCodeFromNil("\";\n"); // suffix is the same for verbatim string and string literal
+                    AddTokenValueAsLiteral(token, codeMapper);
                     break;
                 case TokenType.LeftCommentDelimiter:
-                    codeMapper.AddNilGeneratingCode(token.Value);
                     EvaluateComment(tokenEnumerator, codeMapper);
                     break;
                 case TokenType.LeftContentDelimiter:
-                    codeMapper.AddNilGeneratingCode(token.Value);
                     EvaluateContent(tokenEnumerator, codeMapper);
                     break;
                 case TokenType.LeftStatementDelimiter:
-                    codeMapper.AddNilGeneratingCode(token.Value);
                     EvaluateStatement(tokenEnumerator, codeMapper);
                     break;
                 case TokenType.LeftCustomBlockDelimiter:
-                    codeMapper.AddNilGeneratingCode(token.Value);
                     EvaluateCustomBlock(tokenEnumerator, codeMapper);
                     break;
                 default:
@@ -180,19 +157,70 @@ internal class TemplateCodeGenerator
         }
     }
 
+    private static void AddTokenValueAsLiteral(Token token, CodeMapper codeMapper)
+    {
+        string literal = SymbolDisplay.FormatLiteral(token.Value, true); // can return string literal ("") or verbatim string (@"")
+        bool isVerbatimString = literal.Substring(0, 2) == "@\"";
+                    
+        string quotePrefix;
+        EscapeSequenceMatcher escapeSequenceMatcher;
+        if (isVerbatimString)
+        {
+            // verbatim string
+            literal = literal.Substring(2, literal.Length - 3); // remove verbatim quotes @"..."
+            quotePrefix = "@\"";
+            escapeSequenceMatcher = CodeMapper.VerbatimStringEscapeSequenceMatcher;
+        }
+        else
+        {
+            // string literal
+            literal = literal.Substring(1, literal.Length - 2); // remove quotes "..."
+            quotePrefix = "\"";
+            escapeSequenceMatcher = CodeMapper.StringLiteralEscapeSequenceMatcher;
+        }
+                    
+        codeMapper.AddGeneratedCodeFromNil($"yield return {quotePrefix}");
+        codeMapper.AddEscapedUserProvidedCode(literal, escapeSequenceMatcher);
+        codeMapper.AddGeneratedCodeFromNil("\";\n"); // suffix is the same for verbatim string and string literal
+    }
+    
+    private void EvaluateIfAllowed(Token token, CodeMapper codeMapper, Action<Token, CodeMapper> evaluate, bool runEvaluation)
+    {
+        if (runEvaluation)
+        {
+            evaluate(token, codeMapper);
+        }
+        else
+        {
+            AddTokenValueAsLiteral(token, codeMapper);
+        }
+    }
+
     private void EvaluateStatement(IEnumerator<Token> tokenEnumerator, CodeMapper codeMapper)
     {
+        var token = tokenEnumerator.Current;
+        EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+        {
+            cm.AddNilGeneratingCode(t.Value);
+        }, _configuration.EvaluateStatementBlocks);
+
         while (tokenEnumerator.MoveNext())
         {
-            var token = tokenEnumerator.Current;
+            token = tokenEnumerator.Current;
             switch (token.TokenType)
             {
                 case TokenType.CSharp:
                     string code = token.Value;
-                    codeMapper.AddUserProvidedCode(code);
+                    EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+                    {
+                        cm.AddUserProvidedCode(code);
+                    }, _configuration.EvaluateStatementBlocks);
                     break;
                 case TokenType.RightStatementDelimiter:
-                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+                    {
+                        cm.AddNilGeneratingCode(t.Value);
+                    }, _configuration.EvaluateStatementBlocks);
                     return;
                 default:
                     throw UnexpectedTokenException(token, codeMapper);
@@ -202,14 +230,23 @@ internal class TemplateCodeGenerator
 
     private void EvaluateContent(IEnumerator<Token> tokenEnumerator, CodeMapper codeMapper)
     {
-        codeMapper.AddGeneratedCodeFromNil("""yield return $"{""");
-
+        var token = tokenEnumerator.Current;
+        
+        EvaluateIfAllowed(token, codeMapper,
+            (t, cm) =>
+            {
+                cm.AddNilGeneratingCode(t.Value);
+                cm.AddGeneratedCodeFromNil("""yield return $"{""");
+            },
+            _configuration.EvaluateContentBlocks
+        );
+        
         ContentState currentState = ContentState.Code;
         string? code = null;
         string? format = null;
         while (tokenEnumerator.MoveNext())
         {
-            var token = tokenEnumerator.Current;
+            token = tokenEnumerator.Current;
             switch (token.TokenType)
             {
                 case TokenType.CSharp:
@@ -225,15 +262,22 @@ internal class TemplateCodeGenerator
                     }
 
                     int basePosition = codeMapper.GeneratedCodeLength;
-                    codeMapper.AddUserProvidedCode(code);
-                    AssureCodeIsExpression(code, codeMapper, basePosition);
+                    
+                    EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+                    {
+                        cm.AddUserProvidedCode(code);
+                        AssureCodeIsExpression(code, cm, basePosition);
+                    }, _configuration.EvaluateContentBlocks);
 
                     break;
                 case TokenType.ContentFormatDelimiter:
                     
                     currentState = ContentState.Format;
-                    codeMapper.AddNilGeneratingCode(token.Value);
-                    codeMapper.AddGeneratedCodeFromNil(":");
+                    EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+                    {
+                        cm.AddNilGeneratingCode(t.Value);
+                        cm.AddGeneratedCodeFromNil(":");
+                    }, _configuration.EvaluateContentBlocks);
                     break;
                 case TokenType.Literal:
                     if (format != null || currentState != ContentState.Format)
@@ -244,8 +288,11 @@ internal class TemplateCodeGenerator
                     format = token.Value
                         .Replace("{", "{{")
                         .Replace("}", "}}");
-                    codeMapper.AddEscapedUserProvidedCode(format, CodeMapper.BracketEscapeSequenceMatcher);
-                    
+
+                    EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+                    {
+                        cm.AddEscapedUserProvidedCode(format, CodeMapper.BracketEscapeSequenceMatcher);
+                    }, _configuration.EvaluateContentBlocks);
                     break;
                 case TokenType.RightContentDelimiter:
                     if (String.IsNullOrEmpty(code))
@@ -253,9 +300,11 @@ internal class TemplateCodeGenerator
                         throw UnexpectedTokenException(token, codeMapper);
                     }
                     
-                    codeMapper.AddNilGeneratingCode(token.Value);
-                    codeMapper.AddGeneratedCodeFromNil("}\";\n");
-                    
+                    EvaluateIfAllowed(token, codeMapper, (t, cm) =>
+                    {
+                        cm.AddNilGeneratingCode(t.Value);
+                        cm.AddGeneratedCodeFromNil("}\";\n");
+                    }, _configuration.EvaluateContentBlocks);
                     return;
                 default:
                     throw UnexpectedTokenException(token, codeMapper);
@@ -265,16 +314,28 @@ internal class TemplateCodeGenerator
 
     private void EvaluateComment(IEnumerator<Token> tokenEnumerator, CodeMapper codeMapper)
     {
+        var token = tokenEnumerator.Current;
+        EvaluateIfAllowed(token, codeMapper,
+            (t, cm) => cm.AddNilGeneratingCode(t.Value),
+            _configuration.RemoveCommentBlocks
+        );
+
         while (tokenEnumerator.MoveNext())
         {
-            var token = tokenEnumerator.Current;
+            token = tokenEnumerator.Current;
             switch (token.TokenType)
             {
                 case TokenType.Literal:
-                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateIfAllowed(token, codeMapper,
+                        (t, cm) => cm.AddNilGeneratingCode(t.Value),
+                        _configuration.RemoveCommentBlocks
+                    );
                     break;
                 case TokenType.RightCommentDelimiter:
-                    codeMapper.AddNilGeneratingCode(token.Value);
+                    EvaluateIfAllowed(token, codeMapper,
+                        (t, cm) => cm.AddNilGeneratingCode(t.Value),
+                        _configuration.RemoveCommentBlocks
+                    );
                     return;
                 default:
                     throw UnexpectedTokenException(token, codeMapper);
@@ -284,13 +345,16 @@ internal class TemplateCodeGenerator
     
     private void EvaluateCustomBlock(IEnumerator<Token> tokenEnumerator, CodeMapper codeMapper)
     {
+        var token = tokenEnumerator.Current;
+        codeMapper.AddNilGeneratingCode(token.Value);
+
         codeMapper.AddGeneratedCodeFromNil("yield return ");
 
         CustomBlockState currentState = CustomBlockState.Identifier;
         ICustomBlock? customBlock = null;
         while (tokenEnumerator.MoveNext())
         {
-            var token = tokenEnumerator.Current;
+            token = tokenEnumerator.Current;
             switch (token.TokenType)
             {
                 case TokenType.Identifier:

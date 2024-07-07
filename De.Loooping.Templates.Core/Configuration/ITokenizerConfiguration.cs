@@ -15,5 +15,4 @@ public interface ITokenizerConfiguration
     string LeftCustomBlockDelimiter { get; }
     string RightCustomBlockDelimiter { get; }
     string CustomBlockIdentifierDelimiter { get; }
-
 }

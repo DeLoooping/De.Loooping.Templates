@@ -1,3 +1,4 @@
+using De.Loooping.Templates.Core.Configuration;
 using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template;
 using De.Loooping.Templates.Core.Tests.Tools;
@@ -43,6 +44,23 @@ public class StatementBlockTests
         Assert.Equal("ABC", result);
     }
     
+    [Fact(DisplayName = $"Statement block is not evaluated when {nameof(TemplateProcessorConfiguration)}.{nameof(TemplateProcessorConfiguration.EvaluateStatementBlocks)} = false")]
+    public void StatementBlockIsNotEvaluatedWhenEvaluateStatementBlocksIsFalse()
+    {
+        // setup
+        string content = "{% yield return \"abc\"\n.ToUpper();\nyield return \"DEF\".ToLower(); %}";
+        TemplateBuilder templateBuilder = new TemplateBuilder(content)
+            .WithType<int>();
+        templateBuilder.Configuration.EvaluateStatementBlocks = false;
+        var template = templateBuilder.Build();
+
+        // act
+        string result = template();
+
+        // verify
+        Assert.Equal(content, result);
+    }
+
     public class CannotEscapeStatementElementData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
     {
         protected override IEnumerable<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)> GetData()

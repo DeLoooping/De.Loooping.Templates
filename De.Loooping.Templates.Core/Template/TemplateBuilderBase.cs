@@ -348,7 +348,7 @@ public abstract class TemplateBuilderBase<TDelegate>
         Tokenizer tokenizer = new Tokenizer(_configuration, _parseOptions);
         List<Token> tokens = tokenizer.Tokenize(_template);
 
-        TemplateCodeGenerator templateCodeGenerator = new(_COMPILATION_NAMESPACE, _CALLER_CLASS, _CALLER_METHOD, _parseOptions, _customBlocks);
+        TemplateCodeGenerator templateCodeGenerator = new(_COMPILATION_NAMESPACE, _CALLER_CLASS, _CALLER_METHOD, _configuration, _parseOptions, _customBlocks);
         string templateCode = templateCodeGenerator.Generate(tokens, Parameters, usings, out codeMapper);
 
         return templateCode;
