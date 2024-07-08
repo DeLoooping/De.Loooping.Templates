@@ -32,7 +32,7 @@ public abstract class TemplateBuilderBase<TDelegate>
     private readonly Lazy<List<KeyValuePair<string, Type>>> _parameters;
     private IEnumerable<KeyValuePair<string, Type>> Parameters => _parameters.Value;
 
-    private Dictionary<string, ICustomBlock> _customBlocks = new();
+    private readonly Dictionary<string, ICustomBlock> _customBlocks = new();
     internal IEnumerable<ICustomBlock> CustomBlocks => _customBlocks.Values; // used for tests
 
     private readonly TemplateProcessorConfiguration _configuration;
@@ -41,7 +41,48 @@ public abstract class TemplateBuilderBase<TDelegate>
     public HashSet<string> Usings { get; } = new();
     public HashSet<Assembly> References { get; } = new();
     
-    
+    internal TemplateBuilderBase(string template, TemplateProcessorConfiguration? configuration = null)
+    {
+        if (!typeof(TDelegate).IsSubclassOf(typeof(Delegate)))
+        {
+            throw new ArgumentException($"{typeof(TDelegate).Name} must be a delegate type");
+        }
+        
+        if (typeof(TDelegate).GetMethod("Invoke")?.ReturnType != typeof(String))
+        {
+            throw new ArgumentException($"{typeof(TDelegate).Name} must have a return type of string");
+        }
+
+        if (configuration != null)
+        {
+            ValidateConfiguration(configuration);
+        }
+
+        _configuration = configuration ?? new();
+        
+        _template = template;
+        _parseOptions = CSharpParseOptions.Default
+            .WithLanguageVersion(_configuration.LanguageVersion)
+            .WithKind(SourceCodeKind.Regular);
+
+        _parameters = new Lazy<List<KeyValuePair<string, Type>>>(() => GetParameters().ToList());
+    }
+
+    private void ValidateConfiguration(TemplateProcessorConfiguration configuration)
+    {
+        var validationResults = 
+            new TemplateProcessorConfigurationValidation()
+                {
+                    CheckCustomBlockConfiguration = _customBlocks.Any()
+                }
+                .Validate(null, configuration);
+        if (validationResults.Failed)
+        {
+            throw new ArgumentException($"{nameof(TemplateProcessorConfiguration)} {nameof(configuration)} is invalid:\n" +
+                                        $"{String.Join('\n', validationResults.Failures)}", nameof(configuration));
+        }
+    }
+
     #region convenience methods
     public void AddType<T>()
     {
@@ -156,40 +197,6 @@ public abstract class TemplateBuilderBase<TDelegate>
         private set => _codeMapper = value;
     }
 
-    internal TemplateBuilderBase(string template, TemplateProcessorConfiguration? configuration = null)
-    {
-        if (!typeof(TDelegate).IsSubclassOf(typeof(Delegate)))
-        {
-            throw new ArgumentException($"{typeof(TDelegate).Name} must be a delegate type");
-        }
-        
-        if (typeof(TDelegate).GetMethod("Invoke")?.ReturnType != typeof(String))
-        {
-            throw new ArgumentException($"{typeof(TDelegate).Name} must have a return type of string");
-        }
-
-        if (configuration != null)
-        {
-            var validationResults = 
-                new TemplateProcessorConfigurationValidation()
-                .Validate(null, configuration);
-            if (validationResults.Failed)
-            {
-                throw new ArgumentException($"{nameof(TemplateProcessorConfiguration)} {nameof(configuration)} is invalid:\n" +
-                                            $"{String.Join('\n', validationResults.Failures)}", nameof(configuration));
-            }
-        }
-
-        _configuration = configuration ?? new();
-        
-        _template = template;
-        _parseOptions = CSharpParseOptions.Default
-            .WithLanguageVersion(_configuration.LanguageVersion)
-            .WithKind(SourceCodeKind.Regular);
-
-        _parameters = new Lazy<List<KeyValuePair<string, Type>>>(() => GetParameters().ToList());
-    }
-
     private void AddDefaults(HashSet<Assembly> references, HashSet<string> usings)
     {
         var types = new[] { 
@@ -242,6 +249,8 @@ public abstract class TemplateBuilderBase<TDelegate>
 
     public TDelegate Build()
     {
+        ValidateConfiguration(_configuration);
+        
         HashSet<Assembly> references = References.ToHashSet();
         HashSet<string> usings = Usings.ToHashSet();
         AddDefaults(references, usings);

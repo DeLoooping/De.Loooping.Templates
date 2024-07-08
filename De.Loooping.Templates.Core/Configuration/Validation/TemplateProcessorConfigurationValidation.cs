@@ -5,6 +5,8 @@ namespace De.Loooping.Templates.Core.Configuration.Validation;
 
 public class TemplateProcessorConfigurationValidation: IValidateOptions<TemplateProcessorConfiguration>
 {
+    public bool CheckCustomBlockConfiguration { get; set; } = true;
+    
     private void CheckAndAddDelimiterFailure(List<string> failures,
         TemplateProcessorConfiguration options,
         Expression<Func<TemplateProcessorConfiguration, string>> left,
@@ -41,28 +43,51 @@ public class TemplateProcessorConfigurationValidation: IValidateOptions<Template
         List<string> failures = new();
         
         // delimiters cannot be empty
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftContentDelimiter);
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightContentDelimiter);
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.ContentFormatDelimiter);
-        
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftStatementDelimiter);
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightStatementDelimiter);
-        
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftCommentDelimiter);
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightCommentDelimiter);
-        
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftCustomBlockDelimiter);
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightCustomBlockDelimiter);
-        CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.CustomBlockIdentifierDelimiter);
-        
-        // left delimiters must be distinct (cannot be the beginning of another left delimiter)
-        var leftDelimiters = new List<Expression<Func<TemplateProcessorConfiguration, string>>>()
+        if (options.EvaluateContentBlocks)
         {
-            o => o.LeftContentDelimiter,
-            o => o.LeftStatementDelimiter,
-            o => o.LeftCommentDelimiter,
-            o => o.LeftCustomBlockDelimiter
-        };
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftContentDelimiter);
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightContentDelimiter);
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.ContentFormatDelimiter);
+        }
+
+        if (options.EvaluateStatementBlocks)
+        {
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftStatementDelimiter);
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightStatementDelimiter);
+        }
+
+        if (options.RemoveCommentBlocks)
+        {
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftCommentDelimiter);
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightCommentDelimiter);
+        }
+
+        if (CheckCustomBlockConfiguration)
+        {
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.LeftCustomBlockDelimiter);
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.RightCustomBlockDelimiter);
+            CheckForEmptyDelimitersAndAddFailure(failures, options, o => o.CustomBlockIdentifierDelimiter);
+        }
+
+        // left delimiters must be distinct (cannot be the beginning of another left delimiter)
+        var leftDelimiters = new List<Expression<Func<TemplateProcessorConfiguration, string>>>();
+        if (options.EvaluateContentBlocks)
+        {
+            leftDelimiters.Add(o => o.LeftContentDelimiter);
+        }
+        if (options.EvaluateStatementBlocks)
+        {
+            leftDelimiters.Add(o => o.LeftStatementDelimiter);
+        }
+        if (options.RemoveCommentBlocks)
+        {
+            leftDelimiters.Add(o => o.LeftCommentDelimiter);
+        }
+        if (CheckCustomBlockConfiguration)
+        {
+            leftDelimiters.Add(o => o.LeftCustomBlockDelimiter);
+        }
+
         for (int i = 0; i < leftDelimiters.Count; i++)
         {
             for (int j = i+1; j < leftDelimiters.Count; j++)
