@@ -12,6 +12,7 @@ DO NOT ALLOW UNTRUSTED TEMPLATES TO BE EXECUTED IN YOUR ENVIRONMENT!
 - Full support of C# code inside the template
 - Built-in value formatting via [.NET format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types)
 - Error tracking, so exceptions return the error location inside your template
+- Type safety for parameters passed into the template
 
 ## Dependencies:
 - Target frameworks .NET 7.0 and .NET 8.0 are supported.

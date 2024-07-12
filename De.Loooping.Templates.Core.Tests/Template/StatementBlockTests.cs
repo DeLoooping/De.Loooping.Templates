@@ -19,7 +19,7 @@ public class StatementBlockTests
     [Fact(DisplayName = "Multiline statement works")]
     public void MultilineStatementWorks()
     {
-        string content = "{% yield return \"abc\"\n.ToUpper();\nyield return \"DEF\".ToLower(); %}";
+        string content = "{% yield return \"abc \"\n.ToUpper();\nyield return \"DEF\".ToLower(); %}";
         TemplateBuilder templateBuilder = new TemplateBuilder(content);
         var template = templateBuilder.Build();
 
@@ -27,7 +27,7 @@ public class StatementBlockTests
         string result = template();
 
         // verify
-        Assert.Equal("ABCdef", result);
+        Assert.Equal("ABC def", result);
     }
 
     [Fact(DisplayName = "Statement with newline and spaces at end works")]
@@ -61,7 +61,7 @@ public class StatementBlockTests
         Assert.Equal(content, result);
     }
 
-    public class CannotEscapeStatementElementData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
+    private class CannotEscapeStatementElementData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
     {
         protected override IEnumerable<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)> GetData()
         {

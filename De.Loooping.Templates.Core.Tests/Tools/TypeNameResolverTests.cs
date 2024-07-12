@@ -4,7 +4,9 @@ namespace De.Loooping.Templates.Core.Tests.Tools;
 
 public class TypeNameResolverTests
 {
+    // ReSharper disable once MemberCanBePrivate.Global
     public class PublicNestedClass { }
+    
     private class PrivateNestedClass { }
     
     [Theory(DisplayName = $"{nameof(TypeNameResolver)} resolves correct full names including namespace")]

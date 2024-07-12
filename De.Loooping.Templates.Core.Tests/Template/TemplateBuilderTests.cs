@@ -3,6 +3,7 @@ using De.Loooping.Templates.Core.Diagnostic;
 using De.Loooping.Templates.Core.Template;
 using De.Loooping.Templates.Core.Template.CustomBlocks;
 using De.Loooping.Templates.Core.Tests.Tools;
+using JetBrains.Annotations;
 using Xunit.Abstractions;
 
 namespace De.Loooping.Templates.Core.Tests.Template;
@@ -28,8 +29,9 @@ public class TemplateBuilderTests
 
     public class Counter
     {
-        private int _i = 0;
-
+        private int _i;
+        
+        [UsedImplicitly]
         public int CountUp()
         {
             return _i++;
@@ -57,7 +59,7 @@ public class TemplateBuilderTests
         Assert.Equal("|0|\n|1|\n|2|\n", result);
     }
 
-    [Fact(DisplayName = $"{nameof(TemplateBuilder)} implicitely adds references to input type assemblies")]
+    [Fact(DisplayName = $"{nameof(TemplateBuilder)} implicitly adds references to input type assemblies")]
     public void TemplateBuilderAddsReferencesOfInputTypes()
     {
         // setup
@@ -120,8 +122,8 @@ public class TemplateBuilderTests
         // verify
         Assert.Equal(String.Empty, result);
     }
-    
-    public class CompilerErrorsAreAtTheRightLocationData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
+
+    private class CompilerErrorsAreAtTheRightLocationData: TestData<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)>
     {
         protected override IEnumerable<(string content, (int row, int column)[] errorLocations, bool allowAdditionalErrors)> GetData()
         {
@@ -157,8 +159,8 @@ public class TemplateBuilderTests
             Assert.Subset(expectedErrorLocations, actualErrorLocations);
         }
     }
-    
-    public class RuntimeErrorsAreAtTheRightLocationData: TestData<(string content, int line, int column, Type? innerException)>
+
+    private class RuntimeErrorsAreAtTheRightLocationData: TestData<(string content, int line, int column, Type? innerException)>
     {
         protected override IEnumerable<(string content, int line, int column, Type? innerException)> GetData()
         {
@@ -192,6 +194,7 @@ public class TemplateBuilderTests
     }
 
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public class SomeType
     {
         public int Value => 42;
@@ -231,7 +234,7 @@ public class TemplateBuilderTests
     [Fact(DisplayName = $"{nameof(TemplateBuilder)} throws {nameof(SyntaxErrorException)} on unexpected end of file")]
     public void TemplateBuilderThrowsSyntaxErrorOnUnexpectedEndOfFile()
     {
-        // setiup
+        // setup
         string content = "Line 1\nLine 2\nLine {{ 3";
         TemplateBuilder templateBuilder = new TemplateBuilder(content);
         
@@ -239,7 +242,7 @@ public class TemplateBuilderTests
         var exception = Assert.Throws<SyntaxErrorException>(() => templateBuilder.Build());
         
         Assert.Collection(exception.Errors,
-            error =>
+            [AssertionMethod] (error) =>
             {
                 Assert.Equal(3, error.Location.Line);
                 Assert.Equal(10, error.Location.Column);

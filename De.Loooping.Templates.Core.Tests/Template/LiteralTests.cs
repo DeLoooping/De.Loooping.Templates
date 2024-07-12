@@ -34,6 +34,6 @@ public class LiteralTests
         templateBuilder.Build();
         
         // verify
-        Assert.Equal(content, templateBuilder.CodeMapper?.GeneratingCode);
+        Assert.Equal(content, templateBuilder.CodeMapper.GeneratingCode);
     }
 }

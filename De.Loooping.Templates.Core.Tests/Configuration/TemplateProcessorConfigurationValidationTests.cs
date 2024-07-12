@@ -31,22 +31,22 @@ public class TemplateProcessorConfigurationValidationTests
         Assert.False(result.Failed);
     }
 
-    public delegate void SetDelimiter(TemplateProcessorConfiguration config, string value);
+    public delegate void SetDelimiterDelegate(TemplateProcessorConfiguration config, string value);
 
     public class DelimiterSetter
     {
-        private readonly SetDelimiter _setDelimiter;
+        private readonly SetDelimiterDelegate _setDelimiterDelegate;
         private readonly string _name;
 
-        public DelimiterSetter(SetDelimiter setDelimiter, string name)
+        public DelimiterSetter(SetDelimiterDelegate setDelimiterDelegate, string name)
         {
-            _setDelimiter = setDelimiter;
+            _setDelimiterDelegate = setDelimiterDelegate;
             _name = name;
         }
         
         public void SetDelimiter(TemplateProcessorConfiguration configuration, string value)
         {
-            _setDelimiter(configuration, value);
+            _setDelimiterDelegate(configuration, value);
         }
 
         public override string ToString()
@@ -165,13 +165,13 @@ public class TemplateProcessorConfigurationValidationTests
                 c.LeftStatementDelimiter = "{{";
                 c.LeftCommentDelimiter = "{{";
             }, null, true);
-            yield return ("With customblocks", (c) =>
+            yield return ("With custom blocks", (c) =>
             {
                 c.LeftContentDelimiter = "{$";
                 c.LeftCustomBlockDelimiter = "{$";
             }, v => v.CheckCustomBlockConfiguration = true,
                 false);
-            yield return ("Without customblocks", (c) =>
+            yield return ("Without custom blocks", (c) =>
             {
                 c.LeftContentDelimiter = "{$";
                 c.LeftCustomBlockDelimiter = "{$";
@@ -202,7 +202,8 @@ public class TemplateProcessorConfigurationValidationTests
         // verify
         if (result.Failed || !result.Succeeded)
         {
-            _outputHelper.WriteLine(String.Join("\n", result.Failures ?? Enumerable.Empty<string>()));
+            string failMessages = String.Join("\n", result.Failures ?? Enumerable.Empty<string>());
+            _outputHelper.WriteLine($"{name} failed:\n{failMessages}");
         }
         Assert.Equal(isValid, result.Succeeded);
         Assert.Equal(!isValid, result.Failed);
@@ -211,6 +212,7 @@ public class TemplateProcessorConfigurationValidationTests
     [Fact(DisplayName = $"{nameof(TemplateBuilder)} throws if configuration is not valid")]
     public void TemplateBuilderThrowsOnBuildIfConfigurationIsNotValid()
     {
+        // ReSharper disable once UseObjectOrCollectionInitializer
         TemplateBuilder builder = new TemplateBuilder("nothing");
         builder.Configuration.LeftContentDelimiter = "{";
         builder.Configuration.LeftStatementDelimiter = "{%";
@@ -241,6 +243,7 @@ public class TemplateProcessorConfigurationValidationTests
     [Fact(DisplayName = $"{nameof(TemplateBuilder)} throws not if custom block configuration is not valid, but there are no custom blocks")]
     public void TemplateBuilderThrowsNotOnBuildIfCustomBlockConfigurationIsNotValidButThereAreNoCustomBlocks()
     {
+        // ReSharper disable once UseObjectOrCollectionInitializer
         TemplateBuilder builder = new TemplateBuilder("nothing");
         builder.Configuration.LeftContentDelimiter = "{$";
         builder.Configuration.LeftCustomBlockDelimiter = "{$";

@@ -8,14 +8,13 @@ public class CustomBlockTests
 {
     private class MyCustomBlock : ICustomBlock
     {
-        private readonly string _identifier;
-
         public MyCustomBlock(string identifier = "Custom")
         {
-            _identifier = identifier;
+            DefaultIdentifier = identifier;
         }
         
-        public string DefaultIdentifier => _identifier;
+        public string DefaultIdentifier { get; }
+
         public string Evaluate(string content)
         {
             return $"[{content}]";
@@ -87,10 +86,10 @@ public class CustomBlockTests
     {
         // setup
         TemplateBuilder templateBuilder = new TemplateBuilder(String.Empty);
-        templateBuilder.AddCustomBlock(new MyCustomBlock("Custom"));
+        templateBuilder.AddCustomBlock(new MyCustomBlock("Custom2"));
         
         // verify
-        Assert.Throws<ArgumentException>(() => templateBuilder.AddCustomBlock(new MyCustomBlock(), "Custom"));
+        Assert.Throws<ArgumentException>(() => templateBuilder.AddCustomBlock(new MyCustomBlock(), "Custom2"));
     }
 
     [Fact(DisplayName = "Adding custom blocks with whitespace in their identifier throws")]
